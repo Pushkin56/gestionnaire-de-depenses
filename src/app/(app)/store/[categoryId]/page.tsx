@@ -4,13 +4,15 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, PlusCircle, Edit2, Trash2, PackageMinus, AlertTriangle } from "lucide-react";
+import { ArrowLeft, PlusCircle, Edit2, Trash2, PackageMinus, PackagePlus, History as HistoryIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import type { StockCategory, StockItem, Currency } from "@/lib/types";
+import React, { useEffect, useState, useCallback } from "react";
+import type { StockCategory, StockItem, Currency, StockMovement, StockMovementType } from "@/lib/types";
 import AddEditStockItemDialog from "./components/add-edit-stock-item-dialog";
 import RecordStockOutDialog from "./components/record-stock-out-dialog";
+import RecordStockInDialog from "./components/record-stock-in-dialog";
+import StockItemHistoryDialog from "./components/stock-item-history-dialog"; // History dialog
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -23,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/auth-context";
 
 // Mock data - to be replaced with dynamic data fetching or state management
 const mockStockCategories: StockCategory[] = [
@@ -53,10 +56,12 @@ export default function StockCategoryDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const categoryId = params.categoryId as string;
   
   const [category, setCategory] = useState<StockCategory | null>(null);
   const [items, setItems] = useState<StockItem[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
 
   const [isAddEditItemDialogOpen, setIsAddEditItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
@@ -67,42 +72,94 @@ export default function StockCategoryDetailPage() {
   const [isRecordStockOutDialogOpen, setIsRecordStockOutDialogOpen] = useState(false);
   const [itemToRecordStockOut, setItemToRecordStockOut] = useState<StockItem | null>(null);
 
+  const [isRecordStockInDialogOpen, setIsRecordStockInDialogOpen] = useState(false);
+  const [itemToRecordStockIn, setItemToRecordStockIn] = useState<StockItem | null>(null);
+
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [itemForHistory, setItemForHistory] = useState<StockItem | null>(null);
+
+
+  const handleAddMovement = useCallback((item: StockItem, type: StockMovementType, quantity: number, reason?: string, priceAtMovementOverride?: number) => {
+    const newMovement: StockMovement = {
+      id: `mvt-${item.id}-${Date.now()}`,
+      user_id: user?.id || 'mock-user-id',
+      stock_item_id: item.id,
+      type,
+      quantity,
+      price_at_movement: priceAtMovementOverride ?? item.unit_price,
+      reason: reason || (type === 'in' ? 'Entrée de stock' : type === 'out' ? 'Sortie de stock' : 'Ajustement manuel'),
+      created_at: new Date().toISOString(),
+    };
+    setStockMovements(prev => [...prev, newMovement]);
+  }, [user?.id]);
 
   useEffect(() => {
     const foundCategory = mockStockCategories.find(cat => cat.id === categoryId);
     if (foundCategory) {
       setCategory(foundCategory);
-      setItems(allMockStockItems.filter(item => item.stock_category_id === categoryId));
+      const categoryItems = allMockStockItems.filter(item => item.stock_category_id === categoryId);
+      setItems(categoryItems);
+      
+      // Initialize movements only if stockMovements is empty for this category to avoid duplication on HMR
+      if (stockMovements.filter(m => categoryItems.some(ci => ci.id === m.stock_item_id)).length === 0) {
+        const initialMovements: StockMovement[] = categoryItems.map(item => ({
+            id: `mvt-init-${item.id}-${Date.now()}`, // Ensure unique ID for initial loads
+            user_id: user?.id || 'mock-user-id',
+            stock_item_id: item.id,
+            type: 'in',
+            quantity: item.quantity,
+            price_at_movement: item.unit_price,
+            reason: 'Stock initial',
+            created_at: item.created_at,
+        }));
+        setStockMovements(prev => [...prev, ...initialMovements]);
+      }
+
     } else {
       console.error("Category not found");
       toast({ title: "Erreur", description: "Catégorie de stock non trouvée.", variant: "destructive" });
       router.push('/store');
     }
-  }, [categoryId, router, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId, router, toast, user?.id]); // stockMovements removed from deps to prevent re-initialization loops
 
-  const handleAddItemClick = () => {
-    setEditingItem(null);
-    setIsAddEditItemDialogOpen(true);
-  };
 
-  const handleEditItemClick = (item: StockItem) => {
-    setEditingItem(item);
-    setIsAddEditItemDialogOpen(true);
-  };
+  const handleItemSaved = useCallback((savedItem: StockItem) => {
+    let movementReason = "";
+    let movementType: StockMovementType = 'in'; // Default for new item
+    let movementQuantity = savedItem.quantity;
+    let isNewItem = true;
 
-  const handleItemSaved = (savedItem: StockItem) => {
     setItems(prevItems => {
-      const existingIndex = prevItems.findIndex(i => i.id === savedItem.id);
-      if (existingIndex > -1) {
+      const existingItemIndex = prevItems.findIndex(i => i.id === savedItem.id);
+      if (existingItemIndex > -1) { // Editing existing item
+        isNewItem = false;
+        const oldItem = prevItems[existingItemIndex];
+        if (oldItem.quantity !== savedItem.quantity) {
+            movementType = 'adjustment';
+            movementReason = 'Ajustement manuel du stock';
+            movementQuantity = savedItem.quantity; // For adjustment, quantity is the new total state
+        } else {
+            // No quantity change, just item detail update, no specific stock movement for *this* action
+            movementReason = ""; // Prevent movement logging for simple detail edit
+        }
         const updatedItems = [...prevItems];
-        updatedItems[existingIndex] = savedItem;
+        updatedItems[existingItemIndex] = savedItem;
         return updatedItems;
-      } else {
+      } else { // Adding new item
+        movementReason = 'Stock initial';
+        movementType = 'in'; // Type of movement
+        movementQuantity = savedItem.quantity; // Quantity of the 'in' movement
         return [...prevItems, savedItem];
       }
     });
+
+    if (movementReason) { // Only log if there's a reason (new item or quantity adjustment)
+      handleAddMovement(savedItem, movementType, movementQuantity, movementReason, savedItem.unit_price);
+    }
+
     setIsAddEditItemDialogOpen(false);
-  };
+  }, [handleAddMovement]);
   
   const openDeleteConfirmationDialog = (itemId: string) => {
     setItemToDeleteId(itemId);
@@ -112,7 +169,8 @@ export default function StockCategoryDetailPage() {
   const confirmDeleteItem = () => {
     if (itemToDeleteId) {
       setItems(prev => prev.filter(item => item.id !== itemToDeleteId));
-      toast({ title: "Article supprimé", description: "L'article a été retiré du stock (simulation)." });
+      setStockMovements(prev => prev.filter(m => m.stock_item_id !== itemToDeleteId));
+      toast({ title: "Article supprimé", description: "L'article et son historique de mouvements ont été retirés (simulation)." });
       setItemToDeleteId(null);
     }
     setIsConfirmDeleteItemDialogOpen(false);
@@ -123,18 +181,59 @@ export default function StockCategoryDetailPage() {
     setIsRecordStockOutDialogOpen(true);
   };
 
-  const handleStockOutRecorded = (itemId: string, quantityOut: number) => {
-     setItems(prevItems => 
-      prevItems.map(item => 
-        item.id === itemId 
-          ? { ...item, quantity: Math.max(0, item.quantity - quantityOut), updated_at: new Date().toISOString() } 
-          : item
-      )
+  const handleStockOutRecorded = useCallback((itemId: string, quantityOut: number) => {
+    let affectedItem: StockItem | undefined;
+    setItems(prevItems => 
+      prevItems.map(item => {
+        if (item.id === itemId) {
+          affectedItem = { ...item, quantity: Math.max(0, item.quantity - quantityOut), updated_at: new Date().toISOString() };
+          return affectedItem;
+        }
+        return item;
+      })
     );
-    // Note: The toast for stock out success is now handled within RecordStockOutDialog
+    if (affectedItem) {
+        handleAddMovement(affectedItem, 'out', quantityOut, 'Sortie de stock', affectedItem.unit_price);
+    }
     setIsRecordStockOutDialogOpen(false);
+  }, [handleAddMovement]);
+
+  const handleRecordStockInClick = (item: StockItem) => {
+    setItemToRecordStockIn(item);
+    setIsRecordStockInDialogOpen(true);
   };
 
+  const handleStockInRecorded = useCallback((itemId: string, quantityIn: number) => {
+    let affectedItem: StockItem | undefined;
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === itemId) {
+          affectedItem = { ...item, quantity: item.quantity + quantityIn, updated_at: new Date().toISOString() };
+          return affectedItem;
+        }
+        return item;
+      })
+    );
+    if (affectedItem) {
+        handleAddMovement(affectedItem, 'in', quantityIn, 'Entrée de stock', affectedItem.unit_price);
+    }
+    setIsRecordStockInDialogOpen(false);
+  }, [handleAddMovement]);
+  
+  const handleShowHistoryClick = (item: StockItem) => {
+    setItemForHistory(item);
+    setIsHistoryDialogOpen(true);
+  };
+
+  const handleAddItemClick = () => {
+    setEditingItem(null);
+    setIsAddEditItemDialogOpen(true);
+  };
+
+  const handleEditItemClick = (item: StockItem) => {
+    setEditingItem(item);
+    setIsAddEditItemDialogOpen(true);
+  };
 
   if (!category) {
     return (
@@ -180,12 +279,28 @@ export default function StockCategoryDetailPage() {
         item={itemToRecordStockOut}
       />
 
+      <RecordStockInDialog
+        open={isRecordStockInDialogOpen}
+        onOpenChange={setIsRecordStockInDialogOpen}
+        onStockInRecorded={handleStockInRecorded}
+        item={itemToRecordStockIn}
+      />
+
+      {itemForHistory && (
+        <StockItemHistoryDialog
+          open={isHistoryDialogOpen}
+          onOpenChange={setIsHistoryDialogOpen}
+          itemName={itemForHistory.name}
+          movements={stockMovements.filter(m => m.stock_item_id === itemForHistory.id)}
+        />
+      )}
+
       <AlertDialog open={isConfirmDeleteItemDialogOpen} onOpenChange={setIsConfirmDeleteItemDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer cet article ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. L'article sera définitivement supprimé de cette catégorie de stock.
+              Cette action est irréversible. L'article et son historique de mouvements seront définitivement supprimés de cette catégorie de stock.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -239,11 +354,17 @@ export default function StockCategoryDetailPage() {
                             {item.low_stock_threshold ?? <span className="text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell className="text-right space-x-1 print:hidden">
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockInClick(item)} title="Ajouter au stock">
+                              <PackagePlus className="h-4 w-4" />
+                            </Button>
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockOutClick(item)} title="Retirer du stock" disabled={item.quantity === 0}>
                               <PackageMinus className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditItemClick(item)} title="Modifier l'article">
                               <Edit2 className="h-4 w-4" />
+                            </Button>
+                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleShowHistoryClick(item)} title="Voir l'historique">
+                              <HistoryIcon className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => openDeleteConfirmationDialog(item.id)} title="Supprimer l'article">
                               <Trash2 className="h-4 w-4" />
@@ -261,3 +382,5 @@ export default function StockCategoryDetailPage() {
     </div>
   );
 }
+    
+    
