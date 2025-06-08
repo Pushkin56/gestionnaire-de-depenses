@@ -2,8 +2,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2 } from "lucide-react"; // Added Settings2 for potential future use
-import { useState, useEffect } from "react";
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react"; // Ajout de React et useCallback
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
 import StatCard from "./stat-card";
@@ -58,8 +58,7 @@ const mockDashboardSubscriptions: Subscription[] = [
     { id: 'sub-streaming', user_id: '1', name: 'Streaming Service', amount: 10, currency: 'EUR', currency_symbol: '€', billing_period: 'monthly', next_billing_date: format(new Date(), 'yyyy-MM-dd'), category_id: 'cat-loisirs', category_name: 'Loisirs', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
-
-export default function DashboardContent() {
+function DashboardContentComponent() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -69,7 +68,6 @@ export default function DashboardContent() {
   const [isAlertLoading, setIsAlertLoading] = useState<boolean>(false);
   const [spendingPercentage, setSpendingPercentage] = useState<number>(0);
   const [aiAlertsEnabled, setAiAlertsEnabled] = useState<boolean>(true);
-
 
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
@@ -107,8 +105,7 @@ export default function DashboardContent() {
           .filter(sub => 
             sub.category_id === mockFoodBudget.category_id && 
             sub.currency === mockFoodBudget.currency && 
-            sub.billing_period === 'monthly' // Consider only monthly for this simple budget period
-            // For more accuracy, check if next_billing_date falls within the current budget period
+            sub.billing_period === 'monthly'
           )
           .reduce((sum, sub) => sum + sub.amount, 0);
         
@@ -142,39 +139,44 @@ export default function DashboardContent() {
     };
 
     fetchBudgetAlert();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, preferredCurrency, aiAlertsEnabled, mockTransactionsForExport, mockDashboardSubscriptions]); 
+  }, [user, preferredCurrency, aiAlertsEnabled]); 
 
-  const handleTransactionAdded = (transaction: Transaction) => {
+  const handleTransactionAdded = useCallback((transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
-    // This is where you would typically refetch transactions or update the local mock data
-    // For now, if aiAlertsEnabled, we will re-trigger the budget alert calculation
-    // by adding a dependency to mockTransactionsForExport in the useEffect above.
-    // In a real app, mockTransactionsForExport would be state and updated here.
+    // In a real app, mockTransactionsForExport would be state and updated here,
+    // which would trigger the useEffect for fetchBudgetAlert.
+    // For now, manually re-triggering fetch if AI alerts are on by changing a dependency
+    // or simply re-calling, but it's better to rely on dependency changes.
+    // As mockTransactionsForExport is not state, this re-fetch won't happen automatically.
+    // This part needs real state management for `mockTransactionsForExport` to be fully reactive.
+    toast({ title: transaction.id.startsWith('tx-') ? "Transaction ajoutée" : "Transaction modifiée", description: "Votre transaction a été enregistrée (simulation)." });
     if (aiAlertsEnabled) {
-       // The useEffect will re-run due to mockTransactionsForExport changing (if it were state)
+       // To simulate re-fetch, we could introduce a dummy state toggler here
+       // or ideally, mockTransactionsForExport would be stateful and updated, triggering the useEffect.
     }
-  };
+  }, [aiAlertsEnabled, toast]);
 
-  const handleEditTransaction = (transaction: Transaction) => {
+  const handleEditTransaction = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction);
     setIsAddTransactionOpen(true);
-  };
+  }, []);
 
-  const handleDeleteTransaction = (transactionId: string) => {
+  const handleDeleteTransaction = useCallback((transactionId: string) => {
     console.log("Delete transaction:", transactionId);
+    // Similar to handleTransactionAdded, this needs to update actual data
+    // for the budget alert to react.
     toast({ title: "Suppression", description: "Transaction supprimée (simulation)." });
     if (aiAlertsEnabled) {
-        // As above, this would ideally update state which triggers useEffect.
+      // Simulate re-fetch or rely on stateful data update
     }
-  };
+  }, [aiAlertsEnabled, toast]);
 
-  const openAddTransactionDialog = () => {
+  const openAddTransactionDialog = useCallback(() => {
     setEditingTransaction(null);
     setIsAddTransactionOpen(true);
-  };
+  }, []);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     try {
       exportTransactionsToExcel(mockTransactionsForExport);
       toast({ title: "Exportation Excel réussie", description: "Le fichier Excel a été téléchargé." });
@@ -182,9 +184,9 @@ export default function DashboardContent() {
       console.error("Erreur d'export Excel:", error);
       toast({ title: "Erreur d'exportation Excel", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
     }
-  };
+  }, [toast]);
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = useCallback(async () => {
     try {
       const success = await exportTransactionsToPdf(mockTransactionsForExport);
       if (success) {
@@ -196,21 +198,20 @@ export default function DashboardContent() {
       console.error("Erreur d'export PDF:", error);
       toast({ title: "Erreur d'exportation PDF", description: "Une erreur inattendue s'est produite.", variant: "destructive" });
     }
-  };
+  }, [toast]);
 
-  const getAlertIcon = () => {
+  const getAlertIcon = useCallback(() => {
     if (spendingPercentage > 80) return <AlertTriangle className="h-5 w-5" />;
     if (spendingPercentage >= 50) return <Info className="h-5 w-5" />;
     if (spendingPercentage < 50 && spendingPercentage > 0) return <PartyPopper className="h-5 w-5" />;
     return <Info className="h-5 w-5" />;
-  };
+  }, [spendingPercentage]);
 
-  const getAlertVariant = (): "default" | "destructive" | null | undefined => {
+  const getAlertVariant = useCallback((): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default"; // Will be styled with orange below
+    if (spendingPercentage > 80) return "default";
     return "default";
-  }
-
+  }, [spendingPercentage]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -310,3 +311,8 @@ export default function DashboardContent() {
     </div>
   );
 }
+
+const DashboardContent = React.memo(DashboardContentComponent);
+DashboardContent.displayName = 'DashboardContent';
+
+export default DashboardContent;

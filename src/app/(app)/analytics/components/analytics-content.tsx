@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
-import React from "react";
+import React, { useCallback } from "react"; // Ajout de React et useCallback
 
 
 // Mock data for charts - using more distinct HSL colors from globals.css
@@ -64,7 +64,7 @@ const mockTransactionsForExport: Transaction[] = [
 function AnalyticsContentComponent() {
   const { toast } = useToast();
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     try {
       exportTransactionsToExcel(mockTransactionsForExport);
       toast({ title: "Exportation Excel réussie", description: "Le fichier Excel a été téléchargé." });
@@ -72,13 +72,13 @@ function AnalyticsContentComponent() {
       console.error("Erreur d'export Excel:", error);
       toast({ title: "Erreur d'exportation Excel", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
     }
-  };
+  }, [toast]);
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = useCallback(async () => {
     try {
       const success = await exportTransactionsToPdf(mockTransactionsForExport);
       if (success) {
-        toast({ title: "Exportation PDF réussie", description: "Le fichier PDF a été téléchargé." });
+        toast({ title: "Exportation PDF réussie", description: "Le fichier PDF détaillé a été téléchargé." });
       } else {
         toast({ title: "Erreur d'exportation PDF", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
       }
@@ -86,7 +86,7 @@ function AnalyticsContentComponent() {
       console.error("Erreur d'export PDF:", error);
       toast({ title: "Erreur d'exportation PDF", description: "Une erreur inattendue s'est produite.", variant: "destructive" });
     }
-  };
+  }, [toast]);
 
   return (
     <div className="space-y-6">

@@ -6,16 +6,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import React, { useState, useCallback } from "react"; // Ajout de React et useCallback
 import { Send } from "lucide-react";
 import { askFinancialAssistant, type FinancialAssistantInput } from "@/ai/flows/financial-assistant-flow";
 
-export default function ChatbotPage() {
+function ChatbotPageComponent() {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<{sender: string, text: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim()) return;
 
     const userMessage = { sender: "user", text: inputValue };
@@ -34,7 +34,7 @@ export default function ChatbotPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [inputValue]); // askFinancialAssistant est stable, les setters d'état aussi
 
   return (
     <div className="space-y-6 flex flex-col h-[calc(100vh-10rem)]">
@@ -88,3 +88,8 @@ export default function ChatbotPage() {
     </div>
   );
 }
+
+const ChatbotPage = React.memo(ChatbotPageComponent);
+ChatbotPage.displayName = 'ChatbotPage';
+
+export default ChatbotPage;
