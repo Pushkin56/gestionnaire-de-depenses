@@ -21,10 +21,10 @@ const mockIncomeByCategory: ChartDataPoint[] = [
 ];
 
 const mockExpensesByCategory: ChartDataPoint[] = [
-  { name: "Alimentation", value: 450, fill: "hsl(var(--chart-4))" }, // Red
+  { name: "Alimentation", value: 450, fill: "hsl(var(--chart-3))" }, // Changed from Red to Green
   { name: "Transport", value: 120, fill: "hsl(var(--chart-2))" }, // Purple
-  { name: "Logement", value: 900, fill: "hsl(var(--chart-1))" }, 
-  { name: "Loisirs", value: 200, fill: "hsl(var(--chart-5))" }, 
+  { name: "Logement", value: 900, fill: "hsl(var(--chart-1))" }, // Blue
+  { name: "Loisirs", value: 200, fill: "hsl(var(--chart-5))" }, // Orange
 ];
 
 const mockMonthlyEvolution: TimeSeriesDataPoint[] = [
