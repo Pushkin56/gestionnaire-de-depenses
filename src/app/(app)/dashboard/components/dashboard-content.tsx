@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper } from "lucide-react";
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2 } from "lucide-react"; // Added Settings2 for potential future use
 import { useState, useEffect } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Mock data for stats
 const mockStats = {
@@ -60,15 +62,25 @@ export default function DashboardContent() {
   const [budgetAlertMessage, setBudgetAlertMessage] = useState<string | null>(null);
   const [isAlertLoading, setIsAlertLoading] = useState<boolean>(false);
   const [spendingPercentage, setSpendingPercentage] = useState<number>(0);
+  const [aiAlertsEnabled, setAiAlertsEnabled] = useState<boolean>(true);
 
 
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
 
   useEffect(() => {
+    const storedPreference = localStorage.getItem('budgetBentoAiAlertsEnabled');
+    if (storedPreference !== null) {
+      setAiAlertsEnabled(JSON.parse(storedPreference));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('budgetBentoAiAlertsEnabled', JSON.stringify(aiAlertsEnabled));
+
     const fetchBudgetAlert = async () => {
-      if (!user || mockFoodBudget.currency !== preferredCurrency) {
-        // Basic check, real app might convert or fetch budget in preferred currency
+      if (!user || mockFoodBudget.currency !== preferredCurrency || !aiAlertsEnabled) {
+        setBudgetAlertMessage(null); // Clear any existing message if alerts are disabled
         return;
       }
       setIsAlertLoading(true);
@@ -81,7 +93,7 @@ export default function DashboardContent() {
         setSpendingPercentage(currentSpendingPercentage);
 
 
-        if (mockFoodBudget.amount > 0) { // Avoid division by zero or calling flow if no budget
+        if (mockFoodBudget.amount > 0) {
             const input: BudgetAlertInput = {
                 category_name: mockFoodBudget.category_name,
                 budget_amount: mockFoodBudget.amount,
@@ -93,13 +105,14 @@ export default function DashboardContent() {
             if (response.alert_message && response.alert_message.trim() !== "") {
                 setBudgetAlertMessage(response.alert_message);
             } else {
-                setBudgetAlertMessage(null); // Explicitly set to null if AI returns empty
+                setBudgetAlertMessage(null); 
             }
+        } else {
+            setBudgetAlertMessage(null); // No budget, no alert
         }
       } catch (error) {
         console.error("Error fetching budget alert:", error);
-        // Optionally set a generic error message for the alert
-        // setBudgetAlertMessage("Impossible de récupérer l'alerte budgétaire pour le moment.");
+        setBudgetAlertMessage(null); // Clear message on error
       } finally {
         setIsAlertLoading(false);
       }
@@ -107,11 +120,18 @@ export default function DashboardContent() {
 
     fetchBudgetAlert();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, preferredCurrency]); // Rerun if user or preferred currency changes. mockFoodBudget is stable.
+  }, [user, preferredCurrency, aiAlertsEnabled]); // Rerun if user, currency, or enabled state changes.
 
   const handleTransactionAdded = (transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
     // TODO: Refetch budget alert or update relevant data if a transaction impacts it
+    // This will now be handled by the useEffect dependency on aiAlertsEnabled indirectly,
+    // but a direct refetch might be cleaner if transaction data changes.
+    if (aiAlertsEnabled) {
+        // Trigger a re-fetch of budget alert by briefly toggling loading state or similar
+        // or by refactoring fetchBudgetAlert to be callable directly.
+        // For now, relying on existing useEffect.
+    }
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
@@ -123,6 +143,9 @@ export default function DashboardContent() {
     console.log("Delete transaction:", transactionId);
     toast({ title: "Suppression", description: "Transaction supprimée (simulation)." });
     // TODO: Refetch budget alert or update relevant data
+    if (aiAlertsEnabled) {
+        // Potentially refetch alert
+    }
   };
 
   const openAddTransactionDialog = () => {
@@ -152,13 +175,13 @@ export default function DashboardContent() {
   const getAlertIcon = () => {
     if (spendingPercentage > 80) return <AlertTriangle className="h-5 w-5" />;
     if (spendingPercentage >= 50) return <Info className="h-5 w-5" />;
-    if (spendingPercentage < 50 && spendingPercentage > 0) return <PartyPopper className="h-5 w-5" />; // only if some spending
-    return <Info className="h-5 w-5" />; // Default or if 0%
+    if (spendingPercentage < 50 && spendingPercentage > 0) return <PartyPopper className="h-5 w-5" />;
+    return <Info className="h-5 w-5" />;
   };
   
   const getAlertVariant = (): "default" | "destructive" | null | undefined => {
-    if (spendingPercentage > 90) return "destructive"; // More urgent if really over
-    if (spendingPercentage > 80) return "default"; // Using default and rely on icon/text for warning tone
+    if (spendingPercentage > 90) return "destructive";
+    if (spendingPercentage > 80) return "default"; 
     return "default";
   }
 
@@ -205,7 +228,19 @@ export default function DashboardContent() {
         />
       </div>
       
-      {isAlertLoading && (
+      <div className="flex items-center space-x-2 my-4 p-4 border rounded-lg shadow-sm bg-card">
+        <Switch
+          id="ai-alerts-toggle"
+          checked={aiAlertsEnabled}
+          onCheckedChange={setAiAlertsEnabled}
+          aria-label="Activer ou désactiver les alertes budgétaires IA"
+        />
+        <Label htmlFor="ai-alerts-toggle" className="cursor-pointer text-sm font-medium">
+          Activer le conseiller budgétaire IA
+        </Label>
+      </div>
+
+      {aiAlertsEnabled && isAlertLoading && (
         <Alert className="bg-muted">
           <Info className="h-5 w-5" />
           <AlertTitle>Conseiller budgétaire IA</AlertTitle>
@@ -213,7 +248,7 @@ export default function DashboardContent() {
         </Alert>
       )}
 
-      {!isAlertLoading && budgetAlertMessage && (
+      {aiAlertsEnabled && !isAlertLoading && budgetAlertMessage && (
         <Alert variant={getAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}>
           {getAlertIcon()}
           <AlertTitle>Conseiller budgétaire IA</AlertTitle>
@@ -249,3 +284,4 @@ export default function DashboardContent() {
     </div>
   );
 }
+
