@@ -35,7 +35,7 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
             nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={100}
+            outerRadius={90} // Réduit pour donner plus d'espace
             labelLine={false}
             label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
               const RADIAN = Math.PI / 180;
@@ -43,7 +43,14 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
               const x = cx + radius * Math.cos(-midAngle * RADIAN);
               const y = cy + radius * Math.sin(-midAngle * RADIAN);
               return (percent * 100) > 5 ? ( // Only show label if percent is > 5%
-                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                <text 
+                  x={x} 
+                  y={y} 
+                  fill="white" 
+                  textAnchor={x > cx ? 'start' : 'end'} 
+                  dominantBaseline="central"
+                  style={{ fontSize: '12px', pointerEvents: 'none' }} // Taille de police ajustée et pointerEvents
+                >
                   {`${(percent * 100).toFixed(0)}%`}
                 </text>
               ) : null;
@@ -59,3 +66,4 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
     </ChartContainer>
   );
 }
+
