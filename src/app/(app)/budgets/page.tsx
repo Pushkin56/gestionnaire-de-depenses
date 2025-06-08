@@ -9,9 +9,19 @@ import { Edit2, PlusCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import AddEditBudgetDialog from "./components/add-edit-budget-dialog"; // Import the dialog
+import AddEditBudgetDialog from "./components/add-edit-budget-dialog";
 import { useToast } from "@/hooks/use-toast";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Mock Data - replace with API calls and state management
 const mockBudgetsData: Budget[] = [
@@ -32,9 +42,11 @@ export default function BudgetsPage() {
   const [isAddEditBudgetDialogOpen, setIsAddEditBudgetDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const { toast } = useToast();
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
+  const [budgetToDeleteId, setBudgetToDeleteId] = useState<string | null>(null);
 
   const handleAddBudget = () => {
-    setEditingBudget(null); // Ensure we are adding, not editing
+    setEditingBudget(null);
     setIsAddEditBudgetDialogOpen(true);
   };
 
@@ -43,26 +55,32 @@ export default function BudgetsPage() {
     setIsAddEditBudgetDialogOpen(true);
   };
 
-  const handleDeleteBudget = (budgetId: string) => {
-    // TODO: Implement proper delete logic with confirmation dialog
-    setBudgets(prev => prev.filter(b => b.id !== budgetId));
-    toast({ title: "Budget supprimé", description: "Le budget a été retiré de la liste (simulation)." });
+  const openDeleteConfirmationDialog = (budgetId: string) => {
+    setBudgetToDeleteId(budgetId);
+    setIsConfirmDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteBudget = () => {
+    if (budgetToDeleteId) {
+      setBudgets(prev => prev.filter(b => b.id !== budgetToDeleteId));
+      toast({ title: "Budget supprimé", description: "Le budget a été retiré de la liste (simulation)." });
+      setBudgetToDeleteId(null);
+    }
+    setIsConfirmDeleteDialogOpen(false);
   };
 
   const handleBudgetSaved = (savedBudget: Budget) => {
     setBudgets(prevBudgets => {
       const existingIndex = prevBudgets.findIndex(b => b.id === savedBudget.id);
       if (existingIndex > -1) {
-        // Update existing budget
         const updatedBudgets = [...prevBudgets];
         updatedBudgets[existingIndex] = savedBudget;
         return updatedBudgets;
       } else {
-        // Add new budget
         return [...prevBudgets, savedBudget];
       }
     });
-    setIsAddEditBudgetDialogOpen(false); // Close dialog after saving
+    setIsAddEditBudgetDialogOpen(false);
   };
   
   return (
@@ -110,7 +128,7 @@ export default function BudgetsPage() {
                                 <Button variant="ghost" size="icon" onClick={() => handleEditBudget(budget)} className="mr-2">
                                     <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteBudget(budget.id)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(budget.id)} className="text-destructive hover:text-destructive">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>
@@ -135,8 +153,21 @@ export default function BudgetsPage() {
         onBudgetSaved={handleBudgetSaved}
         budgetToEdit={editingBudget}
       />
+
+      <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setIsConfirmDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce budget ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le budget sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBudgetToDeleteId(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteBudget}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
-    
