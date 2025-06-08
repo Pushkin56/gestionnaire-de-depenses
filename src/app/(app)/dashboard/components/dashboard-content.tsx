@@ -228,18 +228,6 @@ export default function DashboardContent() {
         />
       </div>
       
-      <div className="flex items-center space-x-2 my-4 p-4 border rounded-lg shadow-sm bg-card">
-        <Switch
-          id="ai-alerts-toggle"
-          checked={aiAlertsEnabled}
-          onCheckedChange={setAiAlertsEnabled}
-          aria-label="Activer ou désactiver les alertes budgétaires IA"
-        />
-        <Label htmlFor="ai-alerts-toggle" className="cursor-pointer text-sm font-medium">
-          Activer le conseiller budgétaire IA
-        </Label>
-      </div>
-
       {aiAlertsEnabled && isAlertLoading && (
         <Alert className="bg-muted">
           <Info className="h-5 w-5" />
@@ -258,8 +246,19 @@ export default function DashboardContent() {
         </Alert>
       )}
 
-
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 my-4">
+        <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card">
+          <Switch
+            id="ai-alerts-toggle"
+            checked={aiAlertsEnabled}
+            onCheckedChange={setAiAlertsEnabled}
+            aria-label="Activer ou désactiver les alertes budgétaires IA"
+          />
+          <Label htmlFor="ai-alerts-toggle" className="cursor-pointer text-sm font-medium">
+            Activer le conseiller budgétaire IA
+          </Label>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleExportExcel}>
             <Download className="mr-2 h-4 w-4" />
             Exporter en Excel
@@ -269,6 +268,7 @@ export default function DashboardContent() {
             Exporter en PDF
           </Button>
         </div>
+      </div>
 
       <TransactionList
         onEditTransaction={handleEditTransaction}
@@ -284,4 +284,3 @@ export default function DashboardContent() {
     </div>
   );
 }
-
