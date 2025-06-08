@@ -17,6 +17,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Share2, CheckCircle, XCircle } from "lucide-react";
 
 
 // Mock Data
@@ -34,7 +35,7 @@ const preferencesSchema = z.object({
   primary_currency: z.string().min(1, "La devise principale est requise."),
   aiBudgetAlertsEnabled: z.boolean().optional(),
   aiForecastEnabled: z.boolean().optional(),
-  aiInsightsEnabled: z.boolean().optional(), // Nouvelle préférence combinée
+  aiInsightsEnabled: z.boolean().optional(),
 });
 
 type PreferencesFormValues = z.infer<typeof preferencesSchema>;
@@ -44,6 +45,7 @@ export default function PreferencesPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user, updateUserPreferences } = useAuth();
+  const [isNotionConnected, setIsNotionConnected] = useState(false); // Local state for Notion connection
 
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
@@ -52,7 +54,7 @@ export default function PreferencesPage() {
       primary_currency: user?.primary_currency || 'EUR',
       aiBudgetAlertsEnabled: user?.aiBudgetAlertsEnabled ?? true,
       aiForecastEnabled: user?.aiForecastEnabled ?? true,
-      aiInsightsEnabled: user?.aiInsightsEnabled ?? true, // Default for new preference
+      aiInsightsEnabled: user?.aiInsightsEnabled ?? true,
     },
   });
 
@@ -63,8 +65,11 @@ export default function PreferencesPage() {
         primary_currency: user.primary_currency || 'EUR',
         aiBudgetAlertsEnabled: user.aiBudgetAlertsEnabled ?? true,
         aiForecastEnabled: user.aiForecastEnabled ?? true,
-        aiInsightsEnabled: user.aiInsightsEnabled ?? true, // Reset with new preference
+        aiInsightsEnabled: user.aiInsightsEnabled ?? true,
       });
+      // In a real app, you'd fetch this status from your backend/auth context
+      // For now, we'll keep it as a local simulation.
+      // setIsNotionConnected(user.isNotionConnected || false); 
     }
   }, [user, form]);
 
@@ -77,13 +82,32 @@ export default function PreferencesPage() {
         primary_currency: data.primary_currency,
         aiBudgetAlertsEnabled: data.aiBudgetAlertsEnabled,
         aiForecastEnabled: data.aiForecastEnabled,
-        aiInsightsEnabled: data.aiInsightsEnabled, // Save new preference
+        aiInsightsEnabled: data.aiInsightsEnabled,
       });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'enregistrer les préférences.", variant: "destructive" });
     }
     setIsLoading(false);
+  };
+
+  const handleNotionConnect = () => {
+    // Simulate OAuth flow and connection
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsNotionConnected(true);
+      setIsLoading(false);
+      toast({ title: "Notion Connecté", description: "Votre compte Notion a été connecté (simulation)." });
+    }, 1500);
+  };
+
+  const handleNotionDisconnect = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsNotionConnected(false);
+      setIsLoading(false);
+      toast({ title: "Notion Déconnecté", description: "Votre compte Notion a été déconnecté (simulation)." });
+    }, 1000);
   };
 
   return (
@@ -222,8 +246,40 @@ export default function PreferencesPage() {
           </Card>
         </form>
       </Form>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Intégrations</CardTitle>
+          <CardDescription>Connectez l'application à d'autres services.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border p-4 shadow-sm">
+            <div className="flex items-center">
+              <Share2 className="mr-3 h-6 w-6 text-primary" />
+              <div>
+                <h3 className="text-base font-medium">Notion</h3>
+                <p className="text-sm text-muted-foreground">
+                  {isNotionConnected ? "Connecté. Envoyez vos données vers Notion." : "Envoyez vos résumés de dépenses ou transactions vers Notion."}
+                </p>
+              </div>
+            </div>
+            {isNotionConnected ? (
+              <div className="flex items-center space-x-2">
+                 <span className="text-sm text-green-600 flex items-center"><CheckCircle className="h-4 w-4 mr-1"/>Connecté</span>
+                <Button variant="outline" onClick={handleNotionDisconnect} disabled={isLoading}>
+                  <XCircle className="mr-2 h-4 w-4" /> Déconnecter
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleNotionConnect} disabled={isLoading}>
+                {isLoading && isNotionConnected === false ? "Connexion..." : "Connecter à Notion"}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
-
     
