@@ -2,8 +2,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2 } from "lucide-react";
-import React, { useState, useEffect, useCallback } from "react"; // Ajout de React et useCallback
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2, BarChart2 } from "lucide-react"; // Added BarChart2
+import React, { useState, useEffect, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
 import StatCard from "./stat-card";
@@ -14,20 +14,20 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-flow";
+import { getMonthlyForecast, type MonthlyForecastInput } from "@/ai/flows/monthly-forecast-flow"; // Import new flow
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { format, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, isWithinInterval, startOfMonth, endOfMonth, getDaysInMonth, getDate, differenceInCalendarDays } from 'date-fns';
 
 // Mock data for stats
 const mockStats = {
   totalBalance: 12530.50,
-  periodIncome: 2500.00,
-  periodExpenses: 1230.75,
+  periodIncome: 2500.00, // Assume this is for current month for forecast simplicity
+  periodExpenses: 1230.75, // Assume this is for current month for forecast simplicity
   transactionCount: 42,
 };
 
-// Mock data for export - ideally this comes from a shared source or API
 const mockCategoriesForExport: AppCategory[] = [
   { id: 'cat1', name: 'Alimentation', type: 'depense', color: '#ef4444', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: '', updated_at: '' },
@@ -37,7 +37,7 @@ const mockTransactionsForExport: Transaction[] = [
   { id: 'tx1', user_id: '1', amount: 50, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-07-15', description: 'Courses', created_at: '', updated_at: '', category: mockCategoriesForExport[0] },
   { id: 'tx2', user_id: '1', amount: 2000, type: 'recette', currency: 'EUR', category_id: 'cat2', date: '2024-07-01', description: 'Salaire Juillet', created_at: '', updated_at: '', category: mockCategoriesForExport[1] },
   { id: 'tx3', user_id: '1', amount: 25, type: 'depense', currency: 'USD', category_id: 'cat3', date: '2024-07-10', description: 'Ticket Metro', converted_amount: 23, converted_currency: 'EUR', created_at: '', updated_at: '', category: mockCategoriesForExport[2] },
-  { id: 'tx4', user_id: '1', amount: 85, type: 'depense', currency: 'EUR', category_id: 'cat1', date: format(new Date(), 'yyyy-MM-dd'), description: 'Restaurant', created_at: '', updated_at: '', category: mockCategoriesForExport[0] }, // For current month
+  { id: 'tx4', user_id: '1', amount: 85, type: 'depense', currency: 'EUR', category_id: 'cat1', date: format(new Date(), 'yyyy-MM-dd'), description: 'Restaurant', created_at: '', updated_at: '', category: mockCategoriesForExport[0] },
 ];
 
 const mockFoodBudget: Budget = {
@@ -45,7 +45,7 @@ const mockFoodBudget: Budget = {
   user_id: '1', 
   category_id: 'cat1', 
   category_name: 'Alimentation',
-  amount: 150,
+  amount: 150, // Budget mensuel pour l'alimentation
   currency: 'EUR',
   currency_symbol: '€',
   period: 'monthly',
@@ -58,36 +58,54 @@ const mockDashboardSubscriptions: Subscription[] = [
     { id: 'sub-streaming', user_id: '1', name: 'Streaming Service', amount: 10, currency: 'EUR', currency_symbol: '€', billing_period: 'monthly', next_billing_date: format(new Date(), 'yyyy-MM-dd'), category_id: 'cat-loisirs', category_name: 'Loisirs', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
+const currencySymbols: { [key: string]: string } = {
+    EUR: '€',
+    USD: '$',
+    GBP: '£',
+};
+
+
 function DashboardContentComponent() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
   const [budgetAlertMessage, setBudgetAlertMessage] = useState<string | null>(null);
-  const [isAlertLoading, setIsAlertLoading] = useState<boolean>(false);
+  const [isBudgetAlertLoading, setIsBudgetAlertLoading] = useState<boolean>(false);
   const [spendingPercentage, setSpendingPercentage] = useState<number>(0);
-  const [aiAlertsEnabled, setAiAlertsEnabled] = useState<boolean>(true);
+  const [aiBudgetAlertsEnabled, setAiBudgetAlertsEnabled] = useState<boolean>(true);
+
+  const [forecastMessage, setForecastMessage] = useState<string | null>(null);
+  const [isForecastLoading, setIsForecastLoading] = useState<boolean>(false);
+  const [aiForecastEnabled, setAiForecastEnabled] = useState<boolean>(true);
+
 
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
+  const preferredCurrencySymbol = currencySymbols[preferredCurrency] || preferredCurrency;
 
   useEffect(() => {
-    const storedPreference = localStorage.getItem('budgetBentoAiAlertsEnabled');
-    if (storedPreference !== null) {
-      setAiAlertsEnabled(JSON.parse(storedPreference));
+    const storedBudgetAlertPref = localStorage.getItem('budgetBentoAiBudgetAlertsEnabled');
+    if (storedBudgetAlertPref !== null) {
+      setAiBudgetAlertsEnabled(JSON.parse(storedBudgetAlertPref));
+    }
+    const storedForecastPref = localStorage.getItem('budgetBentoAiForecastEnabled');
+    if (storedForecastPref !== null) {
+      setAiForecastEnabled(JSON.parse(storedForecastPref));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('budgetBentoAiAlertsEnabled', JSON.stringify(aiAlertsEnabled));
+    localStorage.setItem('budgetBentoAiBudgetAlertsEnabled', JSON.stringify(aiBudgetAlertsEnabled));
 
     const fetchBudgetAlert = async () => {
-      if (!user || mockFoodBudget.currency !== preferredCurrency || !aiAlertsEnabled) {
+      if (!user || mockFoodBudget.currency !== preferredCurrency || !aiBudgetAlertsEnabled) {
         setBudgetAlertMessage(null);
         return;
       }
-      setIsAlertLoading(true);
+      setIsBudgetAlertLoading(true);
       try {
         const currentMonthStart = startOfMonth(new Date());
         const currentMonthEnd = endOfMonth(new Date());
@@ -134,27 +152,59 @@ function DashboardContentComponent() {
         console.error("Error fetching budget alert:", error);
         setBudgetAlertMessage(null); 
       } finally {
-        setIsAlertLoading(false);
+        setIsBudgetAlertLoading(false);
       }
     };
 
     fetchBudgetAlert();
-  }, [user, preferredCurrency, aiAlertsEnabled]); 
+  }, [user, preferredCurrency, aiBudgetAlertsEnabled]); 
+
+  useEffect(() => {
+    localStorage.setItem('budgetBentoAiForecastEnabled', JSON.stringify(aiForecastEnabled));
+
+    const fetchForecast = async () => {
+        if (!user || !aiForecastEnabled) {
+            setForecastMessage(null);
+            return;
+        }
+        setIsForecastLoading(true);
+        try {
+            const today = new Date();
+            const endOfMonthDate = endOfMonth(today);
+            const daysRemaining = differenceInCalendarDays(endOfMonthDate, today);
+
+            // Using mockStats for average income/expenses for simplicity
+            // In a real app, these would be calculated based on historical data
+            const input: MonthlyForecastInput = {
+                current_balance: stats.totalBalance,
+                // Assuming periodIncome/Expenses in mockStats are for the current month
+                average_monthly_income: stats.periodIncome, 
+                average_monthly_expenses: stats.periodExpenses,
+                days_remaining_in_month: daysRemaining,
+                currency_symbol: preferredCurrencySymbol,
+            };
+            const response = await getMonthlyForecast(input);
+            if (response.forecast_message && response.forecast_message.trim() !== "") {
+                setForecastMessage(response.forecast_message);
+            } else {
+                setForecastMessage(null);
+            }
+        } catch (error) {
+            console.error("Error fetching monthly forecast:", error);
+            setForecastMessage("Impossible de charger la prévision pour le moment.");
+        } finally {
+            setIsForecastLoading(false);
+        }
+    };
+    fetchForecast();
+  }, [user, preferredCurrency, aiForecastEnabled, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
+
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
-    // In a real app, mockTransactionsForExport would be state and updated here,
-    // which would trigger the useEffect for fetchBudgetAlert.
-    // For now, manually re-triggering fetch if AI alerts are on by changing a dependency
-    // or simply re-calling, but it's better to rely on dependency changes.
-    // As mockTransactionsForExport is not state, this re-fetch won't happen automatically.
-    // This part needs real state management for `mockTransactionsForExport` to be fully reactive.
     toast({ title: transaction.id.startsWith('tx-') ? "Transaction ajoutée" : "Transaction modifiée", description: "Votre transaction a été enregistrée (simulation)." });
-    if (aiAlertsEnabled) {
-       // To simulate re-fetch, we could introduce a dummy state toggler here
-       // or ideally, mockTransactionsForExport would be stateful and updated, triggering the useEffect.
-    }
-  }, [aiAlertsEnabled, toast]);
+    // Potentially re-fetch alerts/forecasts if data changes
+  }, [toast]);
 
   const handleEditTransaction = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -163,13 +213,8 @@ function DashboardContentComponent() {
 
   const handleDeleteTransaction = useCallback((transactionId: string) => {
     console.log("Delete transaction:", transactionId);
-    // Similar to handleTransactionAdded, this needs to update actual data
-    // for the budget alert to react.
     toast({ title: "Suppression", description: "Transaction supprimée (simulation)." });
-    if (aiAlertsEnabled) {
-      // Simulate re-fetch or rely on stateful data update
-    }
-  }, [aiAlertsEnabled, toast]);
+  }, [toast]);
 
   const openAddTransactionDialog = useCallback(() => {
     setEditingTransaction(null);
@@ -200,16 +245,16 @@ function DashboardContentComponent() {
     }
   }, [toast]);
 
-  const getAlertIcon = useCallback(() => {
+  const getBudgetAlertIcon = useCallback(() => {
     if (spendingPercentage > 80) return <AlertTriangle className="h-5 w-5" />;
     if (spendingPercentage >= 50) return <Info className="h-5 w-5" />;
     if (spendingPercentage < 50 && spendingPercentage > 0) return <PartyPopper className="h-5 w-5" />;
     return <Info className="h-5 w-5" />;
   }, [spendingPercentage]);
 
-  const getAlertVariant = useCallback((): "default" | "destructive" | null | undefined => {
+  const getBudgetAlertVariant = useCallback((): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default";
+    if (spendingPercentage > 80) return "default"; // This will use orange styling if percentage is > 80 and <=90
     return "default";
   }, [spendingPercentage]);
 
@@ -254,36 +299,71 @@ function DashboardContentComponent() {
           description="Transactions sur la période"
         />
       </div>
+      
+      {/* AI Features Section */}
+      <div className="space-y-4">
+        {aiBudgetAlertsEnabled && isBudgetAlertLoading && (
+          <Alert className="bg-muted">
+            <Info className="h-5 w-5" />
+            <AlertTitle>Conseiller budgétaire IA</AlertTitle>
+            <AlertDescription>Analyse de votre budget en cours...</AlertDescription>
+          </Alert>
+        )}
 
-      {aiAlertsEnabled && isAlertLoading && (
-        <Alert className="bg-muted">
-          <Info className="h-5 w-5" />
-          <AlertTitle>Conseiller budgétaire IA</AlertTitle>
-          <AlertDescription>Analyse de votre budget en cours...</AlertDescription>
-        </Alert>
-      )}
+        {aiBudgetAlertsEnabled && !isBudgetAlertLoading && budgetAlertMessage && (
+          <Alert variant={getBudgetAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}>
+            {getBudgetAlertIcon()}
+            <AlertTitle>Conseiller budgétaire IA</AlertTitle>
+            <AlertDescription>
+              {budgetAlertMessage}
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {aiAlertsEnabled && !isAlertLoading && budgetAlertMessage && (
-        <Alert variant={getAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}>
-          {getAlertIcon()}
-          <AlertTitle>Conseiller budgétaire IA</AlertTitle>
-          <AlertDescription>
-            {budgetAlertMessage}
-          </AlertDescription>
-        </Alert>
-      )}
+        {aiForecastEnabled && isForecastLoading && (
+          <Alert className="bg-muted">
+            <BarChart2 className="h-5 w-5" />
+            <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle>
+            <AlertDescription>Calcul de votre prévision en cours...</AlertDescription>
+          </Alert>
+        )}
+
+        {aiForecastEnabled && !isForecastLoading && forecastMessage && (
+          <Alert>
+            <BarChart2 className="h-5 w-5" />
+            <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle>
+            <AlertDescription>
+              {forecastMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 my-4">
-        <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card">
-          <Switch
-            id="ai-alerts-toggle"
-            checked={aiAlertsEnabled}
-            onCheckedChange={setAiAlertsEnabled}
-            aria-label="Activer ou désactiver les alertes budgétaires IA"
-          />
-          <Label htmlFor="ai-alerts-toggle" className="cursor-pointer text-sm font-medium">
-            Activer le conseiller budgétaire IA
-          </Label>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card">
+            <Switch
+                id="ai-budget-alerts-toggle"
+                checked={aiBudgetAlertsEnabled}
+                onCheckedChange={setAiBudgetAlertsEnabled}
+                aria-label="Activer ou désactiver les alertes budgétaires IA"
+            />
+            <Label htmlFor="ai-budget-alerts-toggle" className="cursor-pointer text-sm font-medium">
+                Conseiller Budgétaire
+            </Label>
+            </div>
+            <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card">
+            <Switch
+                id="ai-forecast-toggle"
+                checked={aiForecastEnabled}
+                onCheckedChange={setAiForecastEnabled}
+                aria-label="Activer ou désactiver le prévisionnel de fin de mois IA"
+            />
+            <Label htmlFor="ai-forecast-toggle" className="cursor-pointer text-sm font-medium">
+                Prévisionnel Fin de Mois
+            </Label>
+            </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleExportExcel}>
