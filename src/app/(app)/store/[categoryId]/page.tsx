@@ -11,7 +11,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import type { StockCategory, StockItem, Currency, StockMovement, StockMovementType } from "@/lib/types";
 import AddEditStockItemDialog from "./components/add-edit-stock-item-dialog";
 import RecordStockOutDialog from "./components/record-stock-out-dialog";
-import RecordStockInDialog from "./components/record-stock-in-dialog";
+import RecordStockInDialog from "./components/record-stock-in-dialog"; // New dialog
 import StockItemHistoryDialog from "./components/stock-item-history-dialog"; // History dialog
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -100,10 +100,9 @@ export default function StockCategoryDetailPage() {
       const categoryItems = allMockStockItems.filter(item => item.stock_category_id === categoryId);
       setItems(categoryItems);
       
-      // Initialize movements only if stockMovements is empty for this category to avoid duplication on HMR
       if (stockMovements.filter(m => categoryItems.some(ci => ci.id === m.stock_item_id)).length === 0) {
         const initialMovements: StockMovement[] = categoryItems.map(item => ({
-            id: `mvt-init-${item.id}-${Date.now()}`, // Ensure unique ID for initial loads
+            id: `mvt-init-${item.id}-${Date.now()}`, 
             user_id: user?.id || 'mock-user-id',
             stock_item_id: item.id,
             type: 'in',
@@ -120,41 +119,38 @@ export default function StockCategoryDetailPage() {
       toast({ title: "Erreur", description: "Catégorie de stock non trouvée.", variant: "destructive" });
       router.push('/store');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, router, toast, user?.id]); // stockMovements removed from deps to prevent re-initialization loops
+  }, [categoryId, router, toast, user?.id]); 
 
 
   const handleItemSaved = useCallback((savedItem: StockItem) => {
     let movementReason = "";
-    let movementType: StockMovementType = 'in'; // Default for new item
+    let movementType: StockMovementType = 'in'; 
     let movementQuantity = savedItem.quantity;
-    let isNewItem = true;
+    let existingItem: StockItem | undefined = undefined;
 
     setItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(i => i.id === savedItem.id);
-      if (existingItemIndex > -1) { // Editing existing item
-        isNewItem = false;
-        const oldItem = prevItems[existingItemIndex];
-        if (oldItem.quantity !== savedItem.quantity) {
+      if (existingItemIndex > -1) { 
+        existingItem = prevItems[existingItemIndex];
+        if (existingItem.quantity !== savedItem.quantity) {
             movementType = 'adjustment';
             movementReason = 'Ajustement manuel du stock';
-            movementQuantity = savedItem.quantity; // For adjustment, quantity is the new total state
+            movementQuantity = savedItem.quantity; 
         } else {
-            // No quantity change, just item detail update, no specific stock movement for *this* action
-            movementReason = ""; // Prevent movement logging for simple detail edit
+            movementReason = ""; 
         }
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = savedItem;
         return updatedItems;
-      } else { // Adding new item
+      } else { 
         movementReason = 'Stock initial';
-        movementType = 'in'; // Type of movement
-        movementQuantity = savedItem.quantity; // Quantity of the 'in' movement
+        movementType = 'in'; 
+        movementQuantity = savedItem.quantity; 
         return [...prevItems, savedItem];
       }
     });
 
-    if (movementReason) { // Only log if there's a reason (new item or quantity adjustment)
+    if (movementReason) { 
       handleAddMovement(savedItem, movementType, movementQuantity, movementReason, savedItem.unit_price);
     }
 
@@ -230,6 +226,7 @@ export default function StockCategoryDetailPage() {
     setIsAddEditItemDialogOpen(true);
   };
 
+  // This function can be kept if another UI element (e.g. clicking item name) is to trigger edit mode
   const handleEditItemClick = (item: StockItem) => {
     setEditingItem(item);
     setIsAddEditItemDialogOpen(true);
@@ -360,9 +357,7 @@ export default function StockCategoryDetailPage() {
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockOutClick(item)} title="Retirer du stock" disabled={item.quantity === 0}>
                               <PackageMinus className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditItemClick(item)} title="Modifier l'article">
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
+                            {/* Le bouton Modifier (Edit2) a été supprimé d'ici */}
                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleShowHistoryClick(item)} title="Voir l'historique">
                               <HistoryIcon className="h-4 w-4" />
                             </Button>
