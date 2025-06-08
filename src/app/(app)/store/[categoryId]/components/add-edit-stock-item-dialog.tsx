@@ -1,32 +1,23 @@
 
 "use client";
 
-// This is a placeholder for the Add/Edit Stock Item Dialog.
-// Full implementation will follow.
-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { StockItem, Currency } from "@/lib/types"; // Assuming Currency type exists
+import type { StockItem, Currency } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/contexts/auth-context";
 
-// Mock currencies, replace with actual data source
-const mockCurrencies: Currency[] = [
-  { code: 'EUR', name: 'Euro', symbol: '€', created_at: '' },
-  { code: 'USD', name: 'US Dollar', symbol: '$', created_at: '' },
-];
-
 const stockItemFormSchema = z.object({
   name: z.string().min(1, "Le nom de l'article est requis.").max(150, "Le nom ne doit pas dépasser 150 caractères."),
   quantity: z.coerce.number().min(0, "La quantité ne peut être négative."),
-  unit_price: z.coerce.number().min(0, "Le prix unitaire ne peut être négatif."),
+  unit_price: z.coerce.number().min(0, "Le prix unitaire ne peut être négatif.").positive("Le prix doit être positif."),
   currency: z.string().min(1, "La devise est requise."),
   low_stock_threshold: z.coerce.number().min(0).optional().nullable(),
 });
@@ -36,16 +27,17 @@ type StockItemFormValues = z.infer<typeof stockItemFormSchema>;
 interface AddEditStockItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onItemSaved: (item: StockItem) => void; // Should use StockItem type
+  onItemSaved: (item: StockItem) => void;
   itemToEdit?: StockItem | null;
-  stockCategoryId: string; // To associate the item with its category
+  stockCategoryId: string;
+  currencies: Currency[]; // Pass currencies as prop
 }
 
-export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved, itemToEdit, stockCategoryId }: AddEditStockItemDialogProps) {
+export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved, itemToEdit, stockCategoryId, currencies }: AddEditStockItemDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const preferredCurrency = user?.primary_currency || mockCurrencies[0]?.code || 'EUR';
+  const preferredCurrency = user?.primary_currency || currencies[0]?.code || 'EUR';
 
   const form = useForm<StockItemFormValues>({
     resolver: zodResolver(stockItemFormSchema),
@@ -82,10 +74,9 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
 
   const onSubmit = async (data: StockItemFormValues) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      const selectedCurrencyInfo = mockCurrencies.find(c => c.code === data.currency);
+      const selectedCurrencyInfo = currencies.find(c => c.code === data.currency);
       if (!selectedCurrencyInfo) {
           toast({ title: "Erreur de devise", description: "Devise sélectionnée non valide.", variant: "destructive" });
           setIsLoading(false);
@@ -101,7 +92,7 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
         unit_price: data.unit_price,
         currency: data.currency,
         currency_symbol: selectedCurrencyInfo.symbol,
-        low_stock_threshold: data.low_stock_threshold ?? undefined,
+        low_stock_threshold: data.low_stock_threshold === null ? undefined : data.low_stock_threshold, // Ensure undefined if null
         created_at: itemToEdit?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -182,7 +173,7 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {mockCurrencies.map(c => (
+                      {currencies.map(c => (
                         <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>
                       ))}
                     </SelectContent>
@@ -199,8 +190,18 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
                 <FormItem>
                   <FormLabel>Seuil de stock bas (Optionnel)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="1" placeholder="Ex: 5" {...field} value={field.value ?? ''} />
+                    <Input 
+                        type="number" 
+                        step="1" 
+                        placeholder="Ex: 5" 
+                        {...field} 
+                        value={field.value === null ? '' : field.value} // Handle null for empty input
+                        onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} // Convert empty string to null
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Recevez une alerte visuelle si la quantité tombe à ce niveau ou en dessous.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
