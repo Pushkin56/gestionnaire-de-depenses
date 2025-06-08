@@ -11,6 +11,7 @@ import TransactionList from "./transaction-list";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import type { Transaction } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context"; // Added
 
 // Mock data - in a real app, this would come from context/API
 const mockStats = {
@@ -25,9 +26,11 @@ export default function DashboardContent() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth(); // Added
 
   // TODO: Fetch real stats based on dateRange
   const stats = mockStats;
+  const preferredCurrency = user?.primary_currency || 'EUR'; // Added
 
   const handleTransactionAdded = (transaction: Transaction) => {
     // This is where you'd update your transactions list, possibly by re-fetching or updating local state
@@ -66,25 +69,29 @@ export default function DashboardContent() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Solde Total"
-          value={stats.totalBalance.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          value={stats.totalBalance}
+          currencyCode={preferredCurrency}
           icon={Wallet}
           description="Solde actuel sur tous les comptes"
         />
         <StatCard
           title="Recettes de la Période"
-          value={stats.periodIncome.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          value={stats.periodIncome}
+          currencyCode={preferredCurrency}
           icon={TrendingUp}
           description="Revenus sur la période sélectionnée"
         />
         <StatCard
           title="Dépenses de la Période"
-          value={stats.periodExpenses.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          value={stats.periodExpenses}
+          currencyCode={preferredCurrency}
           icon={TrendingDown}
           description="Dépenses sur la période sélectionnée"
         />
         <StatCard
           title="Nombre de Transactions"
-          value={stats.transactionCount.toString()}
+          value={stats.transactionCount} // This is not a currency value
+          currencyCode={''} // Pass empty or handle differently if StatCard expects currency for all
           icon={ListFilter}
           description="Transactions sur la période"
         />

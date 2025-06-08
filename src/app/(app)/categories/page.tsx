@@ -61,6 +61,7 @@ export default function CategoriesPage() {
             <CardDescription>Gérez ici toutes vos catégories financières.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -108,6 +109,7 @@ export default function CategoriesPage() {
                     )}
                 </TableBody>
             </Table>
+          </div>
         </CardContent>
       </Card>
       {/* TODO: Add Dialog for Add/Edit Category Form */}

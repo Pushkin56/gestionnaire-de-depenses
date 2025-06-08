@@ -42,7 +42,7 @@ const mockBalanceEvolution: TimeSeriesDataPoint[] = [
 
 export default function AnalyticsContent() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Recettes par Catégorie</CardTitle>

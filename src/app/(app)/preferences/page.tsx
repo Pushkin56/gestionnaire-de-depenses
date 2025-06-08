@@ -5,13 +5,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import type { Currency, UserPreferences } from "@/lib/types";
+import type { Currency } from "@/lib/types"; // UserPreferences type is not directly used here anymore
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -26,14 +26,6 @@ const mockCurrencies: Currency[] = [
   { code: 'XAF', name: 'Franc CFA (CEMAC)', symbol: 'FCFA', created_at: '' },
 ];
 
-const mockUserPreferences: UserPreferences = {
-    id: 'pref1',
-    user_id: 'user1',
-    primary_currency: 'EUR',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-};
-
 const preferencesSchema = z.object({
   primary_currency: z.string().min(1, "La devise principale est requise."),
   // Add other preferences here, e.g., theme, notifications
@@ -45,24 +37,27 @@ type PreferencesFormValues = z.infer<typeof preferencesSchema>;
 export default function PreferencesPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { user, updateUserPreferences } = useAuth();
   
-  // In a real app, fetch current preferences
-  const [currentPreferences, setCurrentPreferences] = useState<UserPreferences>(mockUserPreferences);
-
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      primary_currency: currentPreferences.primary_currency,
+      primary_currency: user?.primary_currency || 'EUR',
     },
   });
+
+  useEffect(() => {
+    if (user?.primary_currency) {
+      form.reset({ primary_currency: user.primary_currency });
+    }
+  }, [user, form]);
 
   const onSubmit = async (data: PreferencesFormValues) => {
     setIsLoading(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      // Update preferences logic here
-      setCurrentPreferences(prev => ({ ...prev, ...data, updated_at: new Date().toISOString() }));
+      updateUserPreferences({ primary_currency: data.primary_currency });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'enregistrer les préférences.", variant: "destructive" });
@@ -84,7 +79,7 @@ export default function PreferencesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Paramètres Généraux</CardTitle>
-              <CardDescription>Personnalisez votre expérience BudgetBento.</CardDescription>
+              <CardDescription>Personnalisez votre expérience.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -93,7 +88,7 @@ export default function PreferencesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Devise Principale</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || user?.primary_currency || 'EUR'}>
                       <FormControl>
                         <SelectTrigger className="w-full sm:w-[280px]">
                           <SelectValue placeholder="Choisissez votre devise principale" />
@@ -106,7 +101,7 @@ export default function PreferencesPage() {
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Cette devise sera utilisée par défaut pour les nouveaux enregistrements et les rapports.
+                      Cette devise sera utilisée par défaut pour certains affichages et rapports.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -128,7 +123,3 @@ export default function PreferencesPage() {
     </div>
   );
 }
-
-// Re-export Form components to avoid direct import in page
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-

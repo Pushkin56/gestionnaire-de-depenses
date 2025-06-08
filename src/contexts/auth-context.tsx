@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, username?: string) => void; // username for signup then login
   signup: (username: string, email: string) => void;
   logout: () => void;
+  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const mockUser: User = { 
       id: 'mock-user-id-' + Date.now(), 
       email, 
-      username: usernameFromSignup || email.split('@')[0] || 'Utilisateur Anonyme'
+      username: usernameFromSignup || email.split('@')[0] || 'Utilisateur Anonyme',
+      primary_currency: 'EUR', // Default primary currency
     };
     localStorage.setItem('budgetbento_user', JSON.stringify(mockUser));
     setUser(mockUser);
@@ -53,8 +55,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/auth');
   };
 
+  const updateUserPreferences = (prefs: Partial<Pick<User, 'primary_currency'>>) => {
+    setUser(currentUser => {
+      if (!currentUser) return null;
+      const updatedUser = { ...currentUser, ...prefs };
+      localStorage.setItem('budgetbento_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, signup, logout, updateUserPreferences }}>
       {children}
     </AuthContext.Provider>
   );

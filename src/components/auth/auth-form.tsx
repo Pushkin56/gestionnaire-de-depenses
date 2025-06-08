@@ -22,7 +22,7 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   username: z.string().min(1, "Nom d'utilisateur requis."),
   email: z.string().email("Email invalide."),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères."),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -76,7 +76,7 @@ export function AuthForm() {
             <div className="rounded-full bg-primary p-3 text-primary-foreground">
                 <DollarSign className="h-8 w-8" />
             </div>
-            <h1 className="text-3xl font-bold text-primary">BudgetBento</h1>
+            <h1 className="text-3xl font-bold text-primary">Gestionnaire de Dépenses</h1>
         </div>
         <Tabs defaultValue="login" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -87,7 +87,7 @@ export function AuthForm() {
             <Card>
             <CardHeader>
                 <CardTitle>Connexion</CardTitle>
-                <CardDescription>Accédez à votre compte BudgetBento.</CardDescription>
+                <CardDescription>Accédez à votre compte.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
@@ -116,7 +116,7 @@ export function AuthForm() {
             <Card>
             <CardHeader>
                 <CardTitle>Inscription</CardTitle>
-                <CardDescription>Créez un nouveau compte BudgetBento.</CardDescription>
+                <CardDescription>Créez un nouveau compte.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">

@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 
 export const metadata: Metadata = {
-  title: 'BudgetBento - Gestionnaire de Dépenses',
-  description: 'Gérez vos dépenses personnelles avec BudgetBento',
+  title: 'Gestionnaire de Dépenses - Suivez vos dépenses facilement',
+  description: 'Suivez vos dépenses facilement avec Gestionnaire de Dépenses',
 };
 
 export default function RootLayout({

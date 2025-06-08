@@ -54,6 +54,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  primary_currency?: string; // Added for user's preferred currency
 }
 
 // Props for chart components
