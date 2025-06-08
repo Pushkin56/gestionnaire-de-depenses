@@ -34,8 +34,7 @@ const preferencesSchema = z.object({
   primary_currency: z.string().min(1, "La devise principale est requise."),
   aiBudgetAlertsEnabled: z.boolean().optional(),
   aiForecastEnabled: z.boolean().optional(),
-  aiTrendAnalysisEnabled: z.boolean().optional(),
-  aiHabitAnalysisEnabled: z.boolean().optional(), // Added new preference
+  aiInsightsEnabled: z.boolean().optional(), // Nouvelle préférence combinée
 });
 
 type PreferencesFormValues = z.infer<typeof preferencesSchema>;
@@ -53,8 +52,7 @@ export default function PreferencesPage() {
       primary_currency: user?.primary_currency || 'EUR',
       aiBudgetAlertsEnabled: user?.aiBudgetAlertsEnabled ?? true,
       aiForecastEnabled: user?.aiForecastEnabled ?? true,
-      aiTrendAnalysisEnabled: user?.aiTrendAnalysisEnabled ?? true,
-      aiHabitAnalysisEnabled: user?.aiHabitAnalysisEnabled ?? true, // Default for new preference
+      aiInsightsEnabled: user?.aiInsightsEnabled ?? true, // Default for new preference
     },
   });
 
@@ -65,8 +63,7 @@ export default function PreferencesPage() {
         primary_currency: user.primary_currency || 'EUR',
         aiBudgetAlertsEnabled: user.aiBudgetAlertsEnabled ?? true,
         aiForecastEnabled: user.aiForecastEnabled ?? true,
-        aiTrendAnalysisEnabled: user.aiTrendAnalysisEnabled ?? true,
-        aiHabitAnalysisEnabled: user.aiHabitAnalysisEnabled ?? true, // Reset with new preference
+        aiInsightsEnabled: user.aiInsightsEnabled ?? true, // Reset with new preference
       });
     }
   }, [user, form]);
@@ -80,8 +77,7 @@ export default function PreferencesPage() {
         primary_currency: data.primary_currency,
         aiBudgetAlertsEnabled: data.aiBudgetAlertsEnabled,
         aiForecastEnabled: data.aiForecastEnabled,
-        aiTrendAnalysisEnabled: data.aiTrendAnalysisEnabled,
-        aiHabitAnalysisEnabled: data.aiHabitAnalysisEnabled, // Save new preference
+        aiInsightsEnabled: data.aiInsightsEnabled, // Save new preference
       });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
@@ -199,33 +195,13 @@ export default function PreferencesPage() {
                 />
                 <FormField
                     control={form.control}
-                    name="aiTrendAnalysisEnabled"
+                    name="aiInsightsEnabled"
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
                             <div className="space-y-0.5">
-                                <FormLabel className="text-base">Analyse des Tendances IA</FormLabel>
+                                <FormLabel className="text-base">Aperçus et Conseils IA</FormLabel>
                                 <FormDescription>
-                                Laissez l'IA identifier des tendances notables dans vos dépenses mensuelles.
-                                </FormDescription>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="aiHabitAnalysisEnabled"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base">Analyse des Habitudes et Recommandations IA</FormLabel>
-                                <FormDescription>
-                                Recevez des observations sur vos habitudes de dépenses et des suggestions.
+                                Recevez des observations sur vos tendances de dépenses et habitudes, ainsi que des recommandations.
                                 </FormDescription>
                             </div>
                             <FormControl>
@@ -250,3 +226,4 @@ export default function PreferencesPage() {
   );
 }
 
+    

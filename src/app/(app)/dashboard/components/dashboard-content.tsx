@@ -16,7 +16,7 @@ import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export
 import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-flow";
 import { getMonthlyForecast, type MonthlyForecastInput } from "@/ai/flows/monthly-forecast-flow";
 import { getExpenseTrend, type ExpenseTrendInput } from "@/ai/flows/expense-trend-flow";
-import { getHabitAnalysis, type HabitAnalysisInput } from "@/ai/flows/habit-analysis-flow"; // Added new flow
+import { getHabitAnalysis, type HabitAnalysisInput } from "@/ai/flows/habit-analysis-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, isWithinInterval, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
 
@@ -102,8 +102,7 @@ function DashboardContentComponent() {
   // AI Feature Preferences from AuthContext
   const aiBudgetAlertsEnabled = user?.aiBudgetAlertsEnabled ?? true;
   const aiForecastEnabled = user?.aiForecastEnabled ?? true;
-  const aiTrendAnalysisEnabled = user?.aiTrendAnalysisEnabled ?? true;
-  const aiHabitAnalysisEnabled = user?.aiHabitAnalysisEnabled ?? true;
+  const aiInsightsEnabled = user?.aiInsightsEnabled ?? true; // Combined insights preference
 
   useEffect(() => {
     const fetchBudgetAlert = async () => {
@@ -156,7 +155,7 @@ function DashboardContentComponent() {
 
   useEffect(() => {
     const fetchTrendAnalysis = async () => {
-        if (!user || !aiTrendAnalysisEnabled) { setTrendMessage(null); return; }
+        if (!user || !aiInsightsEnabled) { setTrendMessage(null); return; } // Use combined preference
         setIsTrendLoading(true);
         try {
             const input: ExpenseTrendInput = { 
@@ -171,12 +170,12 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching expense trend:", error); setTrendMessage("Impossible d'analyser les tendances pour le moment.");}
         finally { setIsTrendLoading(false); }
     };
-    if (aiTrendAnalysisEnabled) fetchTrendAnalysis(); else setTrendMessage(null);
-  }, [user, aiTrendAnalysisEnabled, preferredCurrencySymbol]);
+    if (aiInsightsEnabled) fetchTrendAnalysis(); else setTrendMessage(null); // Use combined preference
+  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); // Depend on combined preference
 
   useEffect(() => {
     const fetchHabitAnalysis = async () => {
-        if (!user || !aiHabitAnalysisEnabled) { setHabitAnalysisMessage(null); return; }
+        if (!user || !aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } // Use combined preference
         setIsHabitAnalysisLoading(true);
         try {
             const input: HabitAnalysisInput = { 
@@ -190,8 +189,8 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
         finally { setIsHabitAnalysisLoading(false); }
     };
-    if (aiHabitAnalysisEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null);
-  }, [user, aiHabitAnalysisEnabled, preferredCurrencySymbol]);
+    if (aiInsightsEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null); // Use combined preference
+  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); // Depend on combined preference
 
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
@@ -266,11 +265,12 @@ function DashboardContentComponent() {
         {aiForecastEnabled && isForecastLoading && ( <Alert className="bg-muted"> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription>Calcul de votre prévision en cours...</AlertDescription> </Alert> )}
         {aiForecastEnabled && !isForecastLoading && forecastMessage && ( <Alert> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription> {forecastMessage} </AlertDescription> </Alert> )}
         
-        {aiTrendAnalysisEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
-        {aiTrendAnalysisEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
+        {/* Combined Insights Section */}
+        {aiInsightsEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçus IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
+        {aiInsightsEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçu des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
 
-        {aiHabitAnalysisEnabled && isHabitAnalysisLoading && ( <Alert className="bg-muted"> <Sparkles className="h-5 w-5" /> <AlertTitle>Analyse des Habitudes IA</AlertTitle> <AlertDescription>Analyse de vos habitudes de dépenses en cours...</AlertDescription> </Alert> )}
-        {aiHabitAnalysisEnabled && !isHabitAnalysisLoading && habitAnalysisMessage && ( <Alert> <Sparkles className="h-5 w-5" /> <AlertTitle>Analyse des Habitudes IA</AlertTitle> <AlertDescription> {habitAnalysisMessage} </AlertDescription> </Alert> )}
+        {aiInsightsEnabled && isHabitAnalysisLoading && ( <Alert className="bg-muted mt-4"> <Sparkles className="h-5 w-5" /> <AlertTitle>Aperçus IA</AlertTitle> <AlertDescription>Analyse de vos habitudes de dépenses en cours...</AlertDescription> </Alert> )}
+        {aiInsightsEnabled && !isHabitAnalysisLoading && habitAnalysisMessage && ( <Alert className="mt-4"> <Sparkles className="h-5 w-5" /> <AlertTitle>Aperçu des Habitudes IA</AlertTitle> <AlertDescription> {habitAnalysisMessage} </AlertDescription> </Alert> )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-end items-center gap-4 my-4">
@@ -291,3 +291,4 @@ DashboardContent.displayName = 'DashboardContent';
 
 export default DashboardContent;
 
+    
