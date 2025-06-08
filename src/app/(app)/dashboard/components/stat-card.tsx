@@ -4,8 +4,8 @@ import type { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   title: string;
-  value: number; // Changed to number for formatting
-  currencyCode: string; // Added for currency formatting
+  value: number;
+  currencyCode: string; 
   icon: LucideIcon;
   description?: string;
 }
@@ -19,7 +19,9 @@ export default function StatCard({ title, value, currencyCode, icon: Icon, descr
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">
-          {value.toLocaleString('fr-FR', { style: 'currency', currency: currencyCode, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {currencyCode
+            ? value.toLocaleString('fr-FR', { style: 'currency', currency: currencyCode, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : value.toLocaleString('fr-FR') /* Format as plain number if no currencyCode */}
         </div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
