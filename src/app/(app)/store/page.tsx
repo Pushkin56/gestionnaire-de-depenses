@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { StockCategory } from "@/lib/types";
-import { Edit2, PlusCircle, Trash2, Eye } from "lucide-react"; // Added Eye for view items
-import { useState } from "react";
+import { Edit2, PlusCircle, Trash2, Eye } from "lucide-react";
+import React, { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -39,32 +39,31 @@ export default function StoreCategoriesPage() {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [categoryToDeleteId, setCategoryToDeleteId] = useState<string | null>(null);
 
-  const handleAddCategory = () => {
+  const handleAddCategory = useCallback(() => {
     setEditingCategory(null);
     setIsAddEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditCategory = (category: StockCategory) => {
+  const handleEditCategory = useCallback((category: StockCategory) => {
     setEditingCategory(category);
     setIsAddEditDialogOpen(true);
-  };
+  }, []);
 
-  const openDeleteConfirmationDialog = (categoryId: string) => {
+  const openDeleteConfirmationDialog = useCallback((categoryId: string) => {
     setCategoryToDeleteId(categoryId);
     setIsConfirmDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteCategory = () => {
+  const confirmDeleteCategory = useCallback(() => {
     if (categoryToDeleteId) {
-      // TODO: Add logic to check if category has items before deleting
       setStockCategories(prev => prev.filter(cat => cat.id !== categoryToDeleteId));
       toast({ title: "Catégorie de stock supprimée", description: "La catégorie a été retirée (simulation)." });
       setCategoryToDeleteId(null);
     }
     setIsConfirmDeleteDialogOpen(false);
-  };
+  }, [categoryToDeleteId, toast]);
 
-  const handleCategorySaved = (savedCategory: StockCategory) => {
+  const handleCategorySaved = useCallback((savedCategory: StockCategory) => {
     setStockCategories(prevCategories => {
       const existingIndex = prevCategories.findIndex(c => c.id === savedCategory.id);
       if (existingIndex > -1) {
@@ -76,11 +75,11 @@ export default function StoreCategoriesPage() {
       }
     });
     setIsAddEditDialogOpen(false);
-  };
+  }, []);
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Magasin / Gestion de Stock</h2>
           <p className="text-muted-foreground">
@@ -103,29 +102,29 @@ export default function StoreCategoriesPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Créée le</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Nom</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Description</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Créée le</TableHead>
+                        <TableHead className="text-right px-2 py-3 sm:px-4">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {stockCategories.map((category) => (
                         <TableRow key={category.id}>
-                            <TableCell className="font-medium">{category.name}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{category.description || '-'}</TableCell>
-                            <TableCell>{format(new Date(category.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="font-medium px-2 py-4 sm:px-4">{category.name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate px-2 py-4 sm:px-4">{category.description || '-'}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">{format(new Date(category.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell className="text-right space-x-1 px-2 py-4 sm:px-4">
                                 <Button variant="outline" size="sm" asChild className="mr-2">
                                   <Link href={`/store/${category.id}`}>
                                     <Eye className="mr-1 h-3.5 w-3.5" />
                                     Voir Articles
                                   </Link>
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)} className="mr-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)} className="h-8 w-8">
                                     <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(category.id)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(category.id)} className="text-destructive hover:text-destructive h-8 w-8">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>

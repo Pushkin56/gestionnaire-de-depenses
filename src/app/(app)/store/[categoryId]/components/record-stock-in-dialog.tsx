@@ -8,13 +8,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { StockItem } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const stockInFormSchema = z.object({
   quantity_in: z.coerce.number().positive("La quantité doit être un nombre positif."),
-  // reason: z.string().optional(), // For future use
 });
 
 type StockInFormValues = z.infer<typeof stockInFormSchema>;
@@ -26,7 +25,7 @@ interface RecordStockInDialogProps {
   item: StockItem | null;
 }
 
-export default function RecordStockInDialog({ open, onOpenChange, onStockInRecorded, item }: RecordStockInDialogProps) {
+function RecordStockInDialogComponent({ open, onOpenChange, onStockInRecorded, item }: RecordStockInDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,17 +39,16 @@ export default function RecordStockInDialog({ open, onOpenChange, onStockInRecor
   useEffect(() => {
     if (open && item) {
       form.reset({
-        quantity_in: 1, // Default to 1 when dialog opens
+        quantity_in: 1,
       });
-      form.clearErrors(); // Clear previous errors
+      form.clearErrors();
     }
   }, [item, form, open]);
 
-  const onSubmit = async (data: StockInFormValues) => {
+  const onSubmit = useCallback(async (data: StockInFormValues) => {
     if (!item) return;
 
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500)); 
     try {
       onStockInRecorded(item.id, data.quantity_in);
@@ -64,7 +62,7 @@ export default function RecordStockInDialog({ open, onOpenChange, onStockInRecor
       toast({ title: "Erreur", description: "Impossible d'enregistrer l'entrée de stock.", variant: "destructive" });
     }
     setIsLoading(false);
-  };
+  }, [item, onStockInRecorded, onOpenChange, toast]);
 
   if (!item) return null;
 
@@ -111,4 +109,7 @@ export default function RecordStockInDialog({ open, onOpenChange, onStockInRecor
   );
 }
 
+const RecordStockInDialog = React.memo(RecordStockInDialogComponent);
+RecordStockInDialog.displayName = 'RecordStockInDialog';
+export default RecordStockInDialog;
     

@@ -8,13 +8,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { StockItem } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const stockOutFormSchema = z.object({
   quantity_out: z.coerce.number().positive("La quantité doit être un nombre positif."),
-  // reason: z.string().optional(), // For future use
 });
 
 type StockOutFormValues = z.infer<typeof stockOutFormSchema>;
@@ -26,7 +25,7 @@ interface RecordStockOutDialogProps {
   item: StockItem | null;
 }
 
-export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRecorded, item }: RecordStockOutDialogProps) {
+function RecordStockOutDialogComponent({ open, onOpenChange, onStockOutRecorded, item }: RecordStockOutDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,13 +39,13 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
   useEffect(() => {
     if (open && item) {
       form.reset({
-        quantity_out: 1, // Default to 1 when dialog opens
+        quantity_out: 1,
       });
-      form.clearErrors(); // Clear previous errors
+      form.clearErrors();
     }
   }, [item, form, open]);
 
-  const onSubmit = async (data: StockOutFormValues) => {
+  const onSubmit = useCallback(async (data: StockOutFormValues) => {
     if (!item) return;
 
     if (data.quantity_out > item.quantity) {
@@ -58,7 +57,6 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
     }
 
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500)); 
     try {
       onStockOutRecorded(item.id, data.quantity_out);
@@ -72,7 +70,7 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
       toast({ title: "Erreur", description: "Impossible d'enregistrer la sortie de stock.", variant: "destructive" });
     }
     setIsLoading(false);
-  };
+  }, [item, onStockOutRecorded, onOpenChange, toast, form]);
 
   if (!item) return null;
 
@@ -107,7 +105,6 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
                 </FormItem>
               )}
             />
-            {/* Add reason field here later if needed */}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Annuler</Button>
               <Button type="submit" disabled={isLoading}>
@@ -120,4 +117,8 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
     </Dialog>
   );
 }
+
+const RecordStockOutDialog = React.memo(RecordStockOutDialogComponent);
+RecordStockOutDialog.displayName = 'RecordStockOutDialog';
+export default RecordStockOutDialog;
     

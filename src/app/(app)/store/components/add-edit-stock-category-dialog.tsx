@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { StockCategory } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/contexts/auth-context";
@@ -28,7 +28,7 @@ interface AddEditStockCategoryDialogProps {
   categoryToEdit?: StockCategory | null;
 }
 
-export default function AddEditStockCategoryDialog({ open, onOpenChange, onCategorySaved, categoryToEdit }: AddEditStockCategoryDialogProps) {
+function AddEditStockCategoryDialogComponent({ open, onOpenChange, onCategorySaved, categoryToEdit }: AddEditStockCategoryDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
@@ -57,9 +57,8 @@ export default function AddEditStockCategoryDialog({ open, onOpenChange, onCateg
     }
   }, [categoryToEdit, form, open]);
 
-  const onSubmit = async (data: StockCategoryFormValues) => {
+  const onSubmit = useCallback(async (data: StockCategoryFormValues) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     try {
       const newOrUpdatedCategory: StockCategory = {
@@ -78,7 +77,7 @@ export default function AddEditStockCategoryDialog({ open, onOpenChange, onCateg
       toast({ title: "Erreur", description: "Impossible d'enregistrer la catégorie de stock.", variant: "destructive" });
     }
     setIsLoading(false);
-  };
+  }, [categoryToEdit, onCategorySaved, onOpenChange, toast, user?.id]);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isLoading) onOpenChange(isOpen); }}>
@@ -129,4 +128,8 @@ export default function AddEditStockCategoryDialog({ open, onOpenChange, onCateg
     </Dialog>
   );
 }
+
+const AddEditStockCategoryDialog = React.memo(AddEditStockCategoryDialogComponent);
+AddEditStockCategoryDialog.displayName = "AddEditStockCategoryDialog";
+export default AddEditStockCategoryDialog;
     

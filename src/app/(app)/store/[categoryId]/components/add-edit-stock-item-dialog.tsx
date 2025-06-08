@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import type { StockItem, Currency } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/contexts/auth-context";
@@ -30,10 +30,10 @@ interface AddEditStockItemDialogProps {
   onItemSaved: (item: StockItem) => void;
   itemToEdit?: StockItem | null;
   stockCategoryId: string;
-  currencies: Currency[]; // Pass currencies as prop
+  currencies: Currency[];
 }
 
-export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved, itemToEdit, stockCategoryId, currencies }: AddEditStockItemDialogProps) {
+function AddEditStockItemDialogComponent({ open, onOpenChange, onItemSaved, itemToEdit, stockCategoryId, currencies }: AddEditStockItemDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
@@ -72,7 +72,7 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
     }
   }, [itemToEdit, form, open, preferredCurrency]);
 
-  const onSubmit = async (data: StockItemFormValues) => {
+  const onSubmit = useCallback(async (data: StockItemFormValues) => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
@@ -92,7 +92,7 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
         unit_price: data.unit_price,
         currency: data.currency,
         currency_symbol: selectedCurrencyInfo.symbol,
-        low_stock_threshold: data.low_stock_threshold === null ? undefined : data.low_stock_threshold, // Ensure undefined if null
+        low_stock_threshold: data.low_stock_threshold === null ? undefined : data.low_stock_threshold,
         created_at: itemToEdit?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -104,11 +104,11 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
       toast({ title: "Erreur", description: "Impossible d'enregistrer l'article de stock.", variant: "destructive" });
     }
     setIsLoading(false);
-  };
+  }, [itemToEdit, stockCategoryId, currencies, onItemSaved, onOpenChange, toast, user?.id]);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isLoading) onOpenChange(isOpen); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{itemToEdit ? "Modifier l'article" : "Ajouter un article au stock"}</DialogTitle>
           <DialogDescription>
@@ -195,8 +195,8 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
                         step="1" 
                         placeholder="Ex: 5" 
                         {...field} 
-                        value={field.value === null ? '' : field.value} // Handle null for empty input
-                        onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} // Convert empty string to null
+                        value={field.value === null ? '' : field.value}
+                        onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                     />
                   </FormControl>
                   <FormDescription>
@@ -219,4 +219,8 @@ export default function AddEditStockItemDialog({ open, onOpenChange, onItemSaved
     </Dialog>
   );
 }
+
+const AddEditStockItemDialog = React.memo(AddEditStockItemDialogComponent);
+AddEditStockItemDialog.displayName = 'AddEditStockItemDialog';
+export default AddEditStockItemDialog;
     

@@ -7,12 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, PlusCircle, Edit2, Trash2, PackageMinus, PackagePlus, History as HistoryIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import type { StockCategory, StockItem, Currency, StockMovement, StockMovementType } from "@/lib/types";
 import AddEditStockItemDialog from "./components/add-edit-stock-item-dialog";
 import RecordStockOutDialog from "./components/record-stock-out-dialog";
-import RecordStockInDialog from "./components/record-stock-in-dialog"; // New dialog
-import StockItemHistoryDialog from "./components/stock-item-history-dialog"; // History dialog
+import RecordStockInDialog from "./components/record-stock-in-dialog";
+import StockItemHistoryDialog from "./components/stock-item-history-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -77,6 +77,8 @@ export default function StockCategoryDetailPage() {
 
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [itemForHistory, setItemForHistory] = useState<StockItem | null>(null);
+  
+  const initialMovementsLoadedRef = React.useRef(false);
 
 
   const handleAddMovement = useCallback((item: StockItem, type: StockMovementType, quantity: number, reason?: string, priceAtMovementOverride?: number) => {
@@ -100,7 +102,7 @@ export default function StockCategoryDetailPage() {
       const categoryItems = allMockStockItems.filter(item => item.stock_category_id === categoryId);
       setItems(categoryItems);
       
-      if (stockMovements.filter(m => categoryItems.some(ci => ci.id === m.stock_item_id)).length === 0) {
+      if (!initialMovementsLoadedRef.current && categoryItems.length > 0) {
         const initialMovements: StockMovement[] = categoryItems.map(item => ({
             id: `mvt-init-${item.id}-${Date.now()}`, 
             user_id: user?.id || 'mock-user-id',
@@ -111,7 +113,8 @@ export default function StockCategoryDetailPage() {
             reason: 'Stock initial',
             created_at: item.created_at,
         }));
-        setStockMovements(prev => [...prev, ...initialMovements]);
+        setStockMovements(initialMovements); // Replace, not append, for initial load
+        initialMovementsLoadedRef.current = true;
       }
 
     } else {
@@ -119,22 +122,23 @@ export default function StockCategoryDetailPage() {
       toast({ title: "Erreur", description: "Catégorie de stock non trouvée.", variant: "destructive" });
       router.push('/store');
     }
-  }, [categoryId, router, toast, user?.id]); 
+  }, [categoryId, router, toast, user?.id]);
 
 
   const handleItemSaved = useCallback((savedItem: StockItem) => {
     let movementReason = "";
-    let movementType: StockMovementType = 'in'; 
+    let movementType: StockMovementType = 'in';
     let movementQuantity = savedItem.quantity;
-    let existingItem: StockItem | undefined = undefined;
+    let isNewItem = true;
 
     setItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(i => i.id === savedItem.id);
-      if (existingItemIndex > -1) { 
-        existingItem = prevItems[existingItemIndex];
+      if (existingItemIndex > -1) {
+        isNewItem = false;
+        const existingItem = prevItems[existingItemIndex];
         if (existingItem.quantity !== savedItem.quantity) {
             movementType = 'adjustment';
-            movementReason = 'Ajustement manuel du stock';
+            movementReason = 'Ajustement manuel (via modif. article)';
             movementQuantity = savedItem.quantity; 
         } else {
             movementReason = ""; 
@@ -142,27 +146,26 @@ export default function StockCategoryDetailPage() {
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = savedItem;
         return updatedItems;
-      } else { 
-        movementReason = 'Stock initial';
-        movementType = 'in'; 
-        movementQuantity = savedItem.quantity; 
+      } else {
+        movementReason = 'Nouvel article (stock initial)';
+        movementType = 'in';
+        movementQuantity = savedItem.quantity;
         return [...prevItems, savedItem];
       }
     });
 
-    if (movementReason) { 
+    if (movementReason) {
       handleAddMovement(savedItem, movementType, movementQuantity, movementReason, savedItem.unit_price);
     }
-
     setIsAddEditItemDialogOpen(false);
   }, [handleAddMovement]);
   
-  const openDeleteConfirmationDialog = (itemId: string) => {
+  const openDeleteConfirmationDialog = useCallback((itemId: string) => {
     setItemToDeleteId(itemId);
     setIsConfirmDeleteItemDialogOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteItem = () => {
+  const confirmDeleteItem = useCallback(() => {
     if (itemToDeleteId) {
       setItems(prev => prev.filter(item => item.id !== itemToDeleteId));
       setStockMovements(prev => prev.filter(m => m.stock_item_id !== itemToDeleteId));
@@ -170,12 +173,12 @@ export default function StockCategoryDetailPage() {
       setItemToDeleteId(null);
     }
     setIsConfirmDeleteItemDialogOpen(false);
-  };
+  }, [itemToDeleteId, toast]);
 
-  const handleRecordStockOutClick = (item: StockItem) => {
+  const handleRecordStockOutClick = useCallback((item: StockItem) => {
     setItemToRecordStockOut(item);
     setIsRecordStockOutDialogOpen(true);
-  };
+  }, []);
 
   const handleStockOutRecorded = useCallback((itemId: string, quantityOut: number) => {
     let affectedItem: StockItem | undefined;
@@ -194,10 +197,10 @@ export default function StockCategoryDetailPage() {
     setIsRecordStockOutDialogOpen(false);
   }, [handleAddMovement]);
 
-  const handleRecordStockInClick = (item: StockItem) => {
+  const handleRecordStockInClick = useCallback((item: StockItem) => {
     setItemToRecordStockIn(item);
     setIsRecordStockInDialogOpen(true);
-  };
+  }, []);
 
   const handleStockInRecorded = useCallback((itemId: string, quantityIn: number) => {
     let affectedItem: StockItem | undefined;
@@ -216,21 +219,21 @@ export default function StockCategoryDetailPage() {
     setIsRecordStockInDialogOpen(false);
   }, [handleAddMovement]);
   
-  const handleShowHistoryClick = (item: StockItem) => {
+  const handleShowHistoryClick = useCallback((item: StockItem) => {
     setItemForHistory(item);
     setIsHistoryDialogOpen(true);
-  };
+  }, []);
 
-  const handleAddItemClick = () => {
+  const handleAddItemClick = useCallback(() => {
     setEditingItem(null);
     setIsAddEditItemDialogOpen(true);
-  };
+  }, []);
 
-  // This function can be kept if another UI element (e.g. clicking item name) is to trigger edit mode
-  const handleEditItemClick = (item: StockItem) => {
-    setEditingItem(item);
-    setIsAddEditItemDialogOpen(true);
-  };
+  const filteredMovementsForItemHistory = useMemo(() => {
+    if (!itemForHistory) return [];
+    return stockMovements.filter(m => m.stock_item_id === itemForHistory.id);
+  }, [itemForHistory, stockMovements]);
+
 
   if (!category) {
     return (
@@ -288,7 +291,7 @@ export default function StockCategoryDetailPage() {
           open={isHistoryDialogOpen}
           onOpenChange={setIsHistoryDialogOpen}
           itemName={itemForHistory.name}
-          movements={stockMovements.filter(m => m.stock_item_id === itemForHistory.id)}
+          movements={filteredMovementsForItemHistory}
         />
       )}
 
@@ -320,12 +323,12 @@ export default function StockCategoryDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead className="text-center">Quantité</TableHead>
-                      <TableHead className="text-right">Prix Unitaire</TableHead>
-                      <TableHead className="text-right">Valeur Totale</TableHead>
-                      <TableHead className="text-center">Seuil Bas</TableHead>
-                      <TableHead className="text-right print:hidden">Actions</TableHead>
+                      <TableHead className="px-2 py-3 sm:px-4">Nom</TableHead>
+                      <TableHead className="text-center px-2 py-3 sm:px-4">Quantité</TableHead>
+                      <TableHead className="text-right px-2 py-3 sm:px-4 whitespace-nowrap">Prix Unitaire</TableHead>
+                      <TableHead className="text-right px-2 py-3 sm:px-4 whitespace-nowrap">Valeur Totale</TableHead>
+                      <TableHead className="text-center px-2 py-3 sm:px-4 whitespace-nowrap">Seuil Bas</TableHead>
+                      <TableHead className="text-right px-2 py-3 sm:px-4 print:hidden">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -334,30 +337,29 @@ export default function StockCategoryDetailPage() {
                       const isLowStock = item.low_stock_threshold !== undefined && item.quantity <= item.low_stock_threshold;
                       return (
                         <TableRow key={item.id} className={isLowStock ? "bg-destructive/10" : ""}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium px-2 py-4 sm:px-4">
                             {item.name}
                             {isLowStock && (
                               <Badge variant="destructive" className="ml-2 animate-pulse">Stock Bas!</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center px-2 py-4 sm:px-4">{item.quantity}</TableCell>
+                          <TableCell className="text-right px-2 py-4 sm:px-4 whitespace-nowrap">
                             {item.unit_price.toLocaleString('fr-FR', { style: 'currency', currency: item.currency, minimumFractionDigits: 2 })}
                           </TableCell>
-                           <TableCell className="text-right font-semibold">
+                           <TableCell className="text-right font-semibold px-2 py-4 sm:px-4 whitespace-nowrap">
                             {totalValue.toLocaleString('fr-FR', { style: 'currency', currency: item.currency, minimumFractionDigits: 2 })}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center px-2 py-4 sm:px-4">
                             {item.low_stock_threshold ?? <span className="text-muted-foreground">-</span>}
                           </TableCell>
-                          <TableCell className="text-right space-x-1 print:hidden">
+                          <TableCell className="text-right space-x-1 px-2 py-4 sm:px-4 print:hidden">
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockInClick(item)} title="Ajouter au stock">
                               <PackagePlus className="h-4 w-4" />
                             </Button>
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockOutClick(item)} title="Retirer du stock" disabled={item.quantity === 0}>
                               <PackageMinus className="h-4 w-4" />
                             </Button>
-                            {/* Le bouton Modifier (Edit2) a été supprimé d'ici */}
                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleShowHistoryClick(item)} title="Voir l'historique">
                               <HistoryIcon className="h-4 w-4" />
                             </Button>
