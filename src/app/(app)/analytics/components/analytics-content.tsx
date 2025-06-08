@@ -67,22 +67,24 @@ function AnalyticsContentComponent() {
   const handleExportExcel = () => {
     try {
       exportTransactionsToExcel(mockTransactionsForExport);
-      toast({ title: "Exportation réussie", description: "Le fichier Excel a été téléchargé." });
+      toast({ title: "Exportation Excel réussie", description: "Le fichier Excel a été téléchargé." });
     } catch (error) {
       console.error("Erreur d'export Excel:", error);
-      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation Excel", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     try {
-      exportTransactionsToPdf(mockTransactionsForExport);
-      // La fonction exportTransactionsToPdf ne génère pas de PDF visible pour l'instant.
-      // Nous affichons un message indiquant que la tentative a été faite.
-      toast({ title: "Tentative d'export PDF", description: "La génération de PDF est en cours de développement." });
+      const success = await exportTransactionsToPdf(mockTransactionsForExport);
+      if (success) {
+        toast({ title: "Exportation PDF réussie", description: "Le fichier PDF a été téléchargé." });
+      } else {
+        toast({ title: "Erreur d'exportation PDF", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
+      }
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
-      toast({ title: "Erreur d'exportation PDF", description: "Impossible de traiter la demande d'export PDF.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation PDF", description: "Une erreur inattendue s'est produite.", variant: "destructive" });
     }
   };
 

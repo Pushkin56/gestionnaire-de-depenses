@@ -9,7 +9,7 @@ import AddTransactionDialog from "./add-transaction-dialog";
 import StatCard from "./stat-card";
 import TransactionList from "./transaction-list";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
-import type { Transaction, Category as AppCategory, Budget } from "@/lib/types";
+import type { Transaction, Category as AppCategory, Budget, Subscription } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
@@ -17,6 +17,7 @@ import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-f
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { format, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 
 // Mock data for stats
 const mockStats = {
@@ -36,13 +37,13 @@ const mockTransactionsForExport: Transaction[] = [
   { id: 'tx1', user_id: '1', amount: 50, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-07-15', description: 'Courses', created_at: '', updated_at: '', category: mockCategoriesForExport[0] },
   { id: 'tx2', user_id: '1', amount: 2000, type: 'recette', currency: 'EUR', category_id: 'cat2', date: '2024-07-01', description: 'Salaire Juillet', created_at: '', updated_at: '', category: mockCategoriesForExport[1] },
   { id: 'tx3', user_id: '1', amount: 25, type: 'depense', currency: 'USD', category_id: 'cat3', date: '2024-07-10', description: 'Ticket Metro', converted_amount: 23, converted_currency: 'EUR', created_at: '', updated_at: '', category: mockCategoriesForExport[2] },
-  { id: 'tx4', user_id: '1', amount: 85, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-07-20', description: 'Restaurant', created_at: '', updated_at: '', category: mockCategoriesForExport[0] }, // Added to trigger budget alert
+  { id: 'tx4', user_id: '1', amount: 85, type: 'depense', currency: 'EUR', category_id: 'cat1', date: format(new Date(), 'yyyy-MM-dd'), description: 'Restaurant', created_at: '', updated_at: '', category: mockCategoriesForExport[0] }, // For current month
 ];
 
 const mockFoodBudget: Budget = {
   id: 'budget1',
-  user_id: '1', // Should match current user
-  category_id: 'cat1', // ID for 'Alimentation'
+  user_id: '1', 
+  category_id: 'cat1', 
   category_name: 'Alimentation',
   amount: 150,
   currency: 'EUR',
@@ -51,6 +52,11 @@ const mockFoodBudget: Budget = {
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
+
+const mockDashboardSubscriptions: Subscription[] = [
+    { id: 'sub-food-service', user_id: '1', name: 'Kit Repas Hebdo', amount: 20, currency: 'EUR', currency_symbol: '€', billing_period: 'monthly', next_billing_date: format(new Date(), 'yyyy-MM-dd'), category_id: 'cat1', category_name: 'Alimentation', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 'sub-streaming', user_id: '1', name: 'Streaming Service', amount: 10, currency: 'EUR', currency_symbol: '€', billing_period: 'monthly', next_billing_date: format(new Date(), 'yyyy-MM-dd'), category_id: 'cat-loisirs', category_name: 'Loisirs', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
 
 
 export default function DashboardContent() {
@@ -80,24 +86,41 @@ export default function DashboardContent() {
 
     const fetchBudgetAlert = async () => {
       if (!user || mockFoodBudget.currency !== preferredCurrency || !aiAlertsEnabled) {
-        setBudgetAlertMessage(null); // Clear any existing message if alerts are disabled
+        setBudgetAlertMessage(null);
         return;
       }
       setIsAlertLoading(true);
       try {
-        const foodSpending = mockTransactionsForExport
-          .filter(tx => tx.category_id === mockFoodBudget.category_id && tx.type === 'depense' && tx.currency === mockFoodBudget.currency)
+        const currentMonthStart = startOfMonth(new Date());
+        const currentMonthEnd = endOfMonth(new Date());
+
+        const foodSpendingFromTransactions = mockTransactionsForExport
+          .filter(tx => 
+            tx.category_id === mockFoodBudget.category_id && 
+            tx.type === 'depense' && 
+            tx.currency === mockFoodBudget.currency &&
+            isWithinInterval(new Date(tx.date), { start: currentMonthStart, end: currentMonthEnd })
+          )
           .reduce((sum, tx) => sum + tx.amount, 0);
 
-        const currentSpendingPercentage = Math.round((foodSpending / mockFoodBudget.amount) * 100);
+        const foodSpendingFromSubscriptions = mockDashboardSubscriptions
+          .filter(sub => 
+            sub.category_id === mockFoodBudget.category_id && 
+            sub.currency === mockFoodBudget.currency && 
+            sub.billing_period === 'monthly' // Consider only monthly for this simple budget period
+            // For more accuracy, check if next_billing_date falls within the current budget period
+          )
+          .reduce((sum, sub) => sum + sub.amount, 0);
+        
+        const totalSpentOnFood = foodSpendingFromTransactions + foodSpendingFromSubscriptions;
+        const currentSpendingPercentage = mockFoodBudget.amount > 0 ? Math.round((totalSpentOnFood / mockFoodBudget.amount) * 100) : 0;
         setSpendingPercentage(currentSpendingPercentage);
-
 
         if (mockFoodBudget.amount > 0) {
             const input: BudgetAlertInput = {
                 category_name: mockFoodBudget.category_name,
                 budget_amount: mockFoodBudget.amount,
-                spent_amount: foodSpending,
+                spent_amount: totalSpentOnFood,
                 currency_symbol: mockFoodBudget.currency_symbol,
                 spending_percentage: currentSpendingPercentage,
             };
@@ -108,11 +131,11 @@ export default function DashboardContent() {
                 setBudgetAlertMessage(null);
             }
         } else {
-            setBudgetAlertMessage(null); // No budget, no alert
+            setBudgetAlertMessage(null); 
         }
       } catch (error) {
         console.error("Error fetching budget alert:", error);
-        setBudgetAlertMessage(null); // Clear message on error
+        setBudgetAlertMessage(null); 
       } finally {
         setIsAlertLoading(false);
       }
@@ -120,17 +143,16 @@ export default function DashboardContent() {
 
     fetchBudgetAlert();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, preferredCurrency, aiAlertsEnabled]); // Rerun if user, currency, or enabled state changes.
+  }, [user, preferredCurrency, aiAlertsEnabled, mockTransactionsForExport, mockDashboardSubscriptions]); 
 
   const handleTransactionAdded = (transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
-    // TODO: Refetch budget alert or update relevant data if a transaction impacts it
-    // This will now be handled by the useEffect dependency on aiAlertsEnabled indirectly,
-    // but a direct refetch might be cleaner if transaction data changes.
+    // This is where you would typically refetch transactions or update the local mock data
+    // For now, if aiAlertsEnabled, we will re-trigger the budget alert calculation
+    // by adding a dependency to mockTransactionsForExport in the useEffect above.
+    // In a real app, mockTransactionsForExport would be state and updated here.
     if (aiAlertsEnabled) {
-        // Trigger a re-fetch of budget alert by briefly toggling loading state or similar
-        // or by refactoring fetchBudgetAlert to be callable directly.
-        // For now, relying on existing useEffect.
+       // The useEffect will re-run due to mockTransactionsForExport changing (if it were state)
     }
   };
 
@@ -142,9 +164,8 @@ export default function DashboardContent() {
   const handleDeleteTransaction = (transactionId: string) => {
     console.log("Delete transaction:", transactionId);
     toast({ title: "Suppression", description: "Transaction supprimée (simulation)." });
-    // TODO: Refetch budget alert or update relevant data
     if (aiAlertsEnabled) {
-        // Potentially refetch alert
+        // As above, this would ideally update state which triggers useEffect.
     }
   };
 
@@ -156,20 +177,24 @@ export default function DashboardContent() {
   const handleExportExcel = () => {
     try {
       exportTransactionsToExcel(mockTransactionsForExport);
-      toast({ title: "Exportation réussie", description: "Le fichier Excel a été téléchargé." });
+      toast({ title: "Exportation Excel réussie", description: "Le fichier Excel a été téléchargé." });
     } catch (error) {
       console.error("Erreur d'export Excel:", error);
-      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation Excel", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     try {
-      exportTransactionsToPdf(mockTransactionsForExport);
-      toast({ title: "Tentative d'export PDF", description: "La génération de PDF est en cours de développement." });
+      const success = await exportTransactionsToPdf(mockTransactionsForExport);
+      if (success) {
+        toast({ title: "Exportation PDF réussie", description: "Le fichier PDF détaillé a été téléchargé." });
+      } else {
+        toast({ title: "Erreur d'exportation PDF", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
+      }
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
-      toast({ title: "Erreur d'exportation PDF", description: "Impossible de traiter la demande d'export PDF.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation PDF", description: "Une erreur inattendue s'est produite.", variant: "destructive" });
     }
   };
 
@@ -182,7 +207,7 @@ export default function DashboardContent() {
 
   const getAlertVariant = (): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default";
+    if (spendingPercentage > 80) return "default"; // Will be styled with orange below
     return "default";
   }
 

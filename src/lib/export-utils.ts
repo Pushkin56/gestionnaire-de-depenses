@@ -2,9 +2,13 @@
 "use client";
 
 import * as XLSX from 'xlsx';
-import { format, parseISO, startOfWeek, getWeek, getYear } from 'date-fns';
+import { format, parseISO, getWeek, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Transaction, Category } from '@/lib/types';
+import type { Transaction } from '@/lib/types';
+// Import dynamique pour jspdf et jspdf-autotable pour alléger le bundle initial
+// et s'assurer qu'ils sont chargés uniquement côté client.
+type jsPDFWithAutoTable = import('jspdf').jsPDF & { autoTable: (options: any) => void };
+
 
 // Helper to group and sum transactions
 const groupAndSum = (
@@ -21,16 +25,14 @@ const groupAndSum = (
       acc[key] = { total: 0, currency: tx.currency };
     }
     acc[key].total += tx.amount;
-    // For simplicity, this assumes transactions in a group might have one primary currency.
-    // A real app would handle multi-currency aggregation or convert to a base currency.
-    acc[key].currency = tx.currency;
+    acc[key].currency = tx.currency; // Simplification: assume une devise par groupe
     return acc;
   }, {} as Record<string, { total: number; currency: string }>);
 
   return Object.entries(grouped)
     .map(([key, value]) => ({
       [dateFieldName]: key,
-      [valueFieldName]: value.total,
+      [valueFieldName]: value.total.toFixed(2), // Format to 2 decimal places for consistency
       [currencyFieldName]: value.currency,
     }))
     .sort((a, b) => (a[dateFieldName] as string).localeCompare(b[dateFieldName] as string));
@@ -47,7 +49,6 @@ const generateSheetData = (transactions: Transaction[]) => {
 
 export const exportTransactionsToExcel = (
   allTransactions: Transaction[],
-  // categories: Category[], // Categories might be used for more detailed reports in future
   filename: string = "rapport_financier.xlsx"
 ) => {
   const wb = XLSX.utils.book_new();
@@ -74,38 +75,75 @@ export const exportTransactionsToExcel = (
   XLSX.writeFile(wb, filename);
 };
 
-export const exportTransactionsToPdf = (
+export const exportTransactionsToPdf = async (
     allTransactions: Transaction[],
-    // categories: Category[] // Placeholder for future use
+    filename: string = "rapport_financier_detaille.pdf"
 ) => {
-  // La fonctionnalité d'export PDF complète nécessiterait une librairie comme jsPDF et jsPDF-AutoTable.
-  // Le code ci-dessous est un placeholder et ne génère pas de PDF fonctionnel actuellement.
-  // console.log("Tentative d'export PDF (fonctionnalité limitée/placeholder).");
+  try {
+    const { jsPDF } = await import('jspdf');
+    await import('jspdf-autotable'); // Ensures autotable is loaded for jsPDF prototype
 
-  // Exemple de ce à quoi pourrait ressembler une implémentation jsPDF (actuellement commenté) :
-  // import('jspdf').then(module => {
-  //   const { jsPDF } = module;
-  //   import('jspdf-autotable').then(() => {
-  //     const doc = new jsPDF();
-  //     doc.text("Rapport Financier - PDF", 14, 16);
-  //     // Ajouter ici la logique pour créer les tables à partir des données de allTransactions
-  //     // par exemple, pour les recettes journalières :
-  //     // const { daily: recettesDaily } = generateSheetData(allTransactions.filter(tx => tx.type === 'recette'));
-  //     // if (recettesDaily.length > 0) {
-  //     //   (doc as any).autoTable({
-  //     //     startY: 20,
-  //     //     head: [['Jour', 'Montant', 'Devise']],
-  //     //     body: recettesDaily.map(r => [r.Jour, r.Montant, r.Devise])
-  //     //   });
-  //     // } else {
-  //     //   doc.text("Aucune recette journalière à afficher.", 14, 20);
-  //     // }
-  //     doc.save("rapport_financier.pdf");
-  //   }).catch(error => console.error("Erreur lors du chargement de jspdf-autotable:", error));
-  // }).catch(error => console.error("Erreur lors du chargement de jspdf:", error));
+    const doc = new jsPDF() as jsPDFWithAutoTable;
+    let startY = 20; // Initial Y position for content
 
-  // Pour l'instant, cette fonction ne fait rien de visible pour l'utilisateur final
-  // car la génération PDF n'est pas active.
-  // Si vous souhaitez une solution immédiate plus simple, elle pourrait générer un fichier texte
-  // ou simplement ne rien faire et le toast indiquera une tentative.
+    doc.setFontSize(18);
+    doc.text("Rapport Financier Détaillé", 14, startY);
+    startY += 10;
+
+    const recettes = allTransactions.filter(tx => tx.type === 'recette');
+    const depenses = allTransactions.filter(tx => tx.type === 'depense');
+
+    const { daily: recettesDaily, weekly: recettesWeekly, monthly: recettesMonthly } = generateSheetData(recettes);
+    const { daily: depensesDaily, weekly: depensesWeekly, monthly: depensesMonthly } = generateSheetData(depenses);
+
+    const sections = [
+      { title: "Recettes Journalières", data: recettesDaily, periodKey: "Jour" },
+      { title: "Recettes Hebdomadaires", data: recettesWeekly, periodKey: "Semaine" },
+      { title: "Recettes Mensuelles", data: recettesMonthly, periodKey: "Mois" },
+      { title: "Dépenses Journalières", data: depensesDaily, periodKey: "Jour" },
+      { title: "Dépenses Hebdomadaires", data: depensesWeekly, periodKey: "Semaine" },
+      { title: "Dépenses Mensuelles", data: depensesMonthly, periodKey: "Mois" },
+    ];
+
+    let hasData = false;
+
+    sections.forEach(section => {
+      if (section.data.length > 0) {
+        hasData = true;
+        if (startY > 260) { // Check if new page is needed
+          doc.addPage();
+          startY = 20;
+        }
+        doc.setFontSize(14);
+        doc.text(section.title, 14, startY);
+        startY += 7;
+
+        doc.autoTable({
+          startY: startY,
+          head: [[section.periodKey, 'Montant', 'Devise']],
+          body: section.data.map(item => [
+            item[section.periodKey], 
+            item.Montant, 
+            item.Devise
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [22, 160, 133] }, // Example: Teal header
+          margin: { top: 10 },
+        });
+        startY = (doc as any).lastAutoTable.finalY + 10;
+      }
+    });
+
+    if (!hasData) {
+        doc.setFontSize(12);
+        doc.text("Aucune donnée à exporter pour la période ou les filtres sélectionnés.", 14, startY);
+    }
+
+    doc.save(filename);
+    return true; // Indicate success
+  } catch (error) {
+    console.error("Erreur lors de la génération du PDF:", error);
+    return false; // Indicate failure
+  }
 };
