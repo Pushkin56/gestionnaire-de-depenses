@@ -12,15 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { Category, Currency, Transaction, TransactionType } from "@/lib/types";
+import type { Category, Currency, Transaction, TransactionType, InterpretedVoiceExpense } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react"; // Removed PlusCircle as it's not used
+import { CalendarIcon } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useAuth } from "@/contexts/auth-context";
 
 // Mock data (replace with API calls)
 const mockCategories: Category[] = [
@@ -28,6 +28,8 @@ const mockCategories: Category[] = [
   { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat3', name: 'Transport', type: 'depense', color: '#3b82f6', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat4', name: 'Freelance', type: 'recette', color: '#06b6d4', user_id: '1', created_at: '', updated_at: '' },
+  { id: 'cat-loisirs', name: 'Loisirs', type: 'depense', color: '#f59e0b', user_id: '1', created_at: '', updated_at: '' },
+  { id: 'cat-restaurant', name: 'Restaurants', type: 'depense', color: '#8b5cf6', user_id: '1', created_at: '', updated_at: '' },
 ];
 const mockCurrencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', created_at: '' },
@@ -52,14 +54,15 @@ type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTransactionAdded: (transaction: Transaction) => void; // Callback after adding
+  onTransactionAdded: (transaction: Transaction) => void;
   transactionToEdit?: Transaction | null;
+  initialData?: InterpretedVoiceExpense | null; // For pre-filling from voice input
 }
 
-export default function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, transactionToEdit }: AddTransactionDialogProps) {
+export default function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, transactionToEdit, initialData }: AddTransactionDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth(); // Get user from auth context
+  const { user } = useAuth();
   const preferredCurrency = user?.primary_currency || 'EUR';
 
   const form = useForm<TransactionFormValues>({
@@ -67,7 +70,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
     defaultValues: {
       type: 'depense',
       amount: 0,
-      currency: preferredCurrency, // Use preferred currency
+      currency: preferredCurrency,
       date: new Date(),
       description: '',
     },
@@ -77,11 +80,39 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
 
   const availableCategories = useMemo(() => {
     return mockCategories.filter(cat => cat.type === transactionType);
-  }, [transactionType]);
+  }, [transactionType, mockCategories]); // Added mockCategories dependency
 
   useEffect(() => {
-    if (open) { // Only reset form when dialog opens or transactionToEdit changes
-      if (transactionToEdit) {
+    if (open) {
+      if (initialData && !transactionToEdit) { // Pre-fill from voice data if no explicit edit
+        let finalCurrency = preferredCurrency;
+        if (initialData.currency) {
+            const foundCurrency = mockCurrencies.find(c => c.code.toUpperCase() === initialData.currency?.toUpperCase());
+            if (foundCurrency) {
+                finalCurrency = foundCurrency.code;
+            }
+        }
+        
+        let finalCategoryId: string | undefined = undefined;
+        if (initialData.category_suggestion) {
+            const foundCategory = mockCategories.find(cat => 
+                cat.name.toLowerCase() === initialData.category_suggestion?.toLowerCase() &&
+                cat.type === (initialData.type || 'depense') // Ensure category type matches
+            );
+            if (foundCategory) {
+                finalCategoryId = foundCategory.id;
+            }
+        }
+
+        form.reset({
+          type: initialData.type || 'depense',
+          amount: initialData.amount || 0,
+          currency: finalCurrency,
+          category_id: finalCategoryId,
+          date: initialData.date_suggestion ? parseISO(initialData.date_suggestion) : new Date(),
+          description: initialData.description_suggestion || '',
+        });
+      } else if (transactionToEdit) {
         form.reset({
           type: transactionToEdit.type,
           amount: transactionToEdit.amount,
@@ -94,15 +125,14 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
         form.reset({
           type: 'depense',
           amount: 0,
-          currency: preferredCurrency, // Use preferred currency for new transactions
+          currency: preferredCurrency,
           date: new Date(),
           description: '',
           category_id: undefined,
         });
       }
     }
-  }, [transactionToEdit, form, open, preferredCurrency]);
-
+  }, [initialData, transactionToEdit, form, open, preferredCurrency, mockCategories]); // Added mockCategories
 
   const onSubmit = async (data: TransactionFormValues) => {
     setIsLoading(true);
@@ -110,7 +140,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
     try {
       const newTransaction: Transaction = {
         id: transactionToEdit?.id || `tx-${Date.now()}`,
-        user_id: user?.id || 'mock-user-id', // Use actual user ID if available
+        user_id: user?.id || 'mock-user-id',
         ...data,
         date: format(data.date, "yyyy-MM-dd"),
         created_at: transactionToEdit?.created_at || new Date().toISOString(),
@@ -148,7 +178,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                         field.onChange(value);
                         form.setValue('category_id', undefined);
                       }}
-                      defaultValue={field.value}
+                      value={field.value} // Use value instead of defaultValue here
                       className="flex space-x-4"
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
@@ -190,7 +220,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Devise</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || preferredCurrency} defaultValue={preferredCurrency}>
+                    <Select onValueChange={field.onChange} value={field.value || preferredCurrency} >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choisissez une devise" />
@@ -214,10 +244,14 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Catégorie</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={availableCategories.length === 0}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""} 
+                    disabled={availableCategories.length === 0 && transactionType !== 'recette'} // Also allow if type is recette as categories might be different
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={availableCategories.length === 0 ? "Aucune catégorie pour ce type" : "Choisissez une catégorie"} />
+                        <SelectValue placeholder={availableCategories.length === 0 && transactionType === 'depense' ? "Aucune catégorie de dépense" : "Choisissez une catégorie"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -281,7 +315,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                 <FormItem>
                   <FormLabel>Description (Optionnel)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ex: Courses hebdomadaires" {...field} />
+                    <Textarea placeholder="Ex: Courses hebdomadaires" {...field} value={field.value ?? ''}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -290,7 +324,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Annuler</Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? (transactionToEdit ? "Modification..." : "Ajout...") : (transactionToEdit ? "Modifier" : "Ajouter")}
+                {isLoading ? (transactionToEdit || initialData ? "Modification..." : "Ajout...") : (transactionToEdit || initialData ? "Modifier" : "Ajouter")}
               </Button>
             </DialogFooter>
           </form>
@@ -299,3 +333,4 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
     </Dialog>
   );
 }
+

@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Mic, MicOff, Loader2, Send, AlertTriangle } from "lucide-react";
+import { Mic, MicOff, Loader2, Send, AlertTriangle, CheckCircle } from "lucide-react"; // Added CheckCircle
 import { interpretVoiceExpense, type InterpretVoiceExpenseInput, type InterpretVoiceExpenseOutput } from "@/ai/flows/interpret-voice-expense-flow";
 import { useAuth } from "@/contexts/auth-context";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface VoiceInputDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInterpretationComplete: (data: InterpretVoiceExpenseOutput) => void; // Callback for next step
+  onInterpretationComplete: (data: InterpretedVoiceExpense) => void;
 }
 
 type RecordingState = "idle" | "permission_pending" | "recording" | "processing" | "error" | "success";
@@ -24,7 +25,7 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
   const { user } = useAuth();
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
-  const [interpretationResult, setInterpretationResult] = useState<InterpretVoiceExpenseOutput | null>(null);
+  const [interpretationResult, setInterpretationResult] = useState<InterpretedVoiceExpense | null>(null);
   const [errorState, setErrorState] = useState<string | null>(null);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -38,7 +39,7 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
         title: "Fonctionnalité non supportée",
         description: "La reconnaissance vocale n'est pas supportée par votre navigateur.",
       });
-      onOpenChange(false); // Close dialog if not supported
+      onOpenChange(false);
       return;
     }
 
@@ -58,8 +59,8 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
 
       recognitionRef.current.onspeechend = () => {
         recognitionRef.current?.stop();
-        if (recordingState === "recording") { // If still recording, means no speech was detected or processed yet
-            setRecordingState("processing"); // Move to processing, then handle no result
+        if (recordingState === "recording") {
+            setRecordingState("processing");
         }
       };
 
@@ -81,21 +82,18 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
         setRecordingState("error");
       };
     }
-     // Cleanup on unmount or when dialog closes
     return () => {
         if (recognitionRef.current) {
             recognitionRef.current.stop();
             recognitionRef.current = null;
         }
     };
-  }, [open, isApiSupported, toast, onOpenChange, recordingState]);
-
+  }, [open, isApiSupported, toast, onOpenChange, recordingState]); // Removed handleInterpretation from deps
 
   const requestMicrophonePermission = async () => {
     setRecordingState("permission_pending");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Permission granted, we can close the stream as SpeechRecognition will handle its own
       stream.getTracks().forEach(track => track.stop());
       return true;
     } catch (err) {
@@ -123,7 +121,6 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
     try {
       recognitionRef.current.start();
     } catch (e) {
-      // Catch potential errors if recognition is already started or other issues
       setErrorState("Impossible de démarrer l'enregistrement. Veuillez réessayer.");
       setRecordingState("error");
        console.error("Error starting recognition:", e);
@@ -134,10 +131,10 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
     if (recognitionRef.current && recordingState === "recording") {
       recognitionRef.current.stop();
     }
-    setRecordingState("processing"); // Assume processing will happen or error out
+    // State transition to "processing" will be handled by onspeechend or onresult
   };
   
-  const handleInterpretation = async (text: string) => {
+  const handleInterpretation = useCallback(async (text: string) => { // useCallback added
     if (!text.trim()) {
         setErrorState("Aucun texte à interpréter. Veuillez réessayer.");
         setRecordingState("error");
@@ -161,20 +158,17 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
       }
       else {
         setRecordingState("success");
-        // For now, we just log. Later, this will pre-fill the form.
-        console.log("Interpretation result:", result);
-        // onInterpretationComplete(result); // This will be used to pass data to next step
       }
     } catch (error) {
       console.error("Error interpreting voice input:", error);
       setErrorState("Erreur lors de l'interprétation de votre demande.");
       setRecordingState("error");
     }
-  };
+  }, [user?.primary_currency]); // Dependencies for useCallback
 
   const handleCloseDialog = () => {
     if (recognitionRef.current && (recordingState === "recording" || recordingState === "permission_pending")) {
-      recognitionRef.current.abort(); // Stop any ongoing recognition
+      recognitionRef.current.abort();
     }
     setRecordingState("idle");
     setTranscribedText("");
@@ -183,8 +177,8 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
     onOpenChange(false);
   };
 
-  const handleConfirmAndClose = () => {
-    if (interpretationResult && !interpretationResult.error) {
+  const handleConfirmAndProceed = () => {
+    if (interpretationResult && !interpretationResult.error && interpretationResult.amount) {
       onInterpretationComplete(interpretationResult);
     }
     handleCloseDialog();
@@ -225,8 +219,8 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
       case "success":
         return (
           <div className="space-y-4">
-            <Alert variant="default">
-              <AlertTitle className="flex items-center gap-2"><Send className="h-5 w-5" /> Interprétation réussie !</AlertTitle>
+            <Alert variant="default" className="border-green-500 dark:border-green-600">
+              <AlertTitle className="flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-5 w-5" /> Interprétation réussie !</AlertTitle>
               <AlertDescription>
                 <p className="font-semibold">Texte original : "{interpretationResult?.original_text}"</p>
                 <ul className="mt-2 list-disc list-inside text-sm">
@@ -234,11 +228,11 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
                   {interpretationResult?.type && <li>Type : {interpretationResult.type === 'depense' ? 'Dépense' : 'Recette'}</li>}
                   {interpretationResult?.description_suggestion && <li>Description : {interpretationResult.description_suggestion}</li>}
                   {interpretationResult?.category_suggestion && <li>Catégorie suggérée : {interpretationResult.category_suggestion}</li>}
-                  {interpretationResult?.date_suggestion && <li>Date suggérée : {format(new Date(interpretationResult.date_suggestion), "PPP", { locale: fr })}</li>}
+                  {interpretationResult?.date_suggestion && <li>Date suggérée : {format(parseISO(interpretationResult.date_suggestion), "PPP", { locale: fr })}</li>}
                 </ul>
               </AlertDescription>
             </Alert>
-            <p className="text-sm text-muted-foreground">Cette fonctionnalité est expérimentale. Vérifiez les informations avant d'ajouter la transaction.</p>
+            <p className="text-sm text-muted-foreground">Vérifiez les informations. Cliquez sur "Valider" pour pré-remplir le formulaire d'ajout de transaction.</p>
           </div>
         );
       case "error":
@@ -259,26 +253,31 @@ export default function VoiceInputDialog({ open, onOpenChange, onInterpretationC
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ajout vocal de dépense</DialogTitle>
+          <DialogTitle>Ajout vocal de transaction</DialogTitle>
           <DialogDescription>
-            Dictez votre dépense (ex: "Courses 50 euros chez Carrefour hier").
+            Dictez votre transaction (ex: "Courses 50 euros chez Carrefour hier").
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 min-h-[150px] flex items-center justify-center">
             {renderContent()}
         </div>
-        <DialogFooter>
-          {recordingState === "error" && (
-            <Button onClick={startRecording} variant="outline">Réessayer</Button>
-          )}
-          {recordingState === "success" && (
-             <Button onClick={handleConfirmAndClose}>Utiliser ces informations (Bientôt)</Button>
-          )}
-          <Button type="button" variant="secondary" onClick={handleCloseDialog}>
-            {recordingState === "success" || recordingState === "error" ? "Fermer" : "Annuler"}
-          </Button>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <div>
+            {recordingState === "error" && (
+                <Button onClick={startRecording} variant="outline">Réessayer</Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={handleCloseDialog}>
+                {recordingState === "success" || recordingState === "error" ? "Fermer" : "Annuler"}
+            </Button>
+            {recordingState === "success" && interpretationResult && !interpretationResult.error && interpretationResult.amount && (
+                <Button onClick={handleConfirmAndProceed}>Valider et pré-remplir</Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
