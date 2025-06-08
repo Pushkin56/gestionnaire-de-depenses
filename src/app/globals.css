@@ -59,51 +59,51 @@ body {
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 225 25% 12%; /* Bleu Nuit Profond */
+    --foreground: 210 30% 96%; /* Texte clair */
 
-    --muted: 222 40% 20%;
-    --muted-foreground: 210 30% 65%;
+    --muted: 225 20% 18%; /* Bleu nuit plus clair pour les zones moins importantes */
+    --muted-foreground: 210 25% 75%; /* Texte sur fond muted */
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 225 25% 15%; /* Fond popover bleu nuit, légèrement plus clair que le bg général */
+    --popover-foreground: 210 30% 96%; /* Texte sur popover */
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 225 25% 15%; /* Fond carte bleu nuit, idem popover */
+    --card-foreground: 210 30% 96%; /* Texte sur carte */
 
-    --border: 222 40% 25%;
-    --input: 222 40% 25%;
+    --border: 225 20% 22%; /* Bordure bleu nuit subtile */
+    --input: 225 20% 22%; /* Fond input, idem bordure */
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 217 91% 60%; /* Primaire (Bleu vibrant) - inchangé */
+    --primary-foreground: 0 0% 100%; /* Texte sur primaire - inchangé */
 
-    --secondary: 222 40% 15%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 225 20% 20%; /* Secondaire bleu nuit */
+    --secondary-foreground: 210 30% 96%; /* Texte sur secondaire */
 
-    --accent: 259 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 259 91% 60%; /* Accent (Violet vibrant) - inchangé */
+    --accent-foreground: 0 0% 100%; /* Texte sur accent - inchangé */
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 70% 50%; /* Rouge pour destructive, légèrement ajusté pour visibilité */
+    --destructive-foreground: 0 0% 98%; /* Texte sur destructive - inchangé */
 
-    --ring: 217 91% 60%;
+    --ring: 217 91% 60%; /* Anneau de focus, lié à primaire - inchangé */
 
-    /* Chart colors for dark mode */
-    --chart-1: 217 91% 65%; /* Lighter Blue */
-    --chart-2: 259 91% 65%; /* Lighter Purple */
-    --chart-3: 142 70% 50%; /* Lighter Green */
-    --chart-4: 0 75% 65%;   /* Lighter Red */
-    --chart-5: 38 90% 60%;  /* Lighter Orange */
+    /* Chart colors for dark mode - inchangées pour l'instant, devraient bien contraster */
+    --chart-1: 217 91% 65%;
+    --chart-2: 259 91% 65%;
+    --chart-3: 142 70% 50%;
+    --chart-4: 0 75% 65%;
+    --chart-5: 38 90% 60%;
     
-    /* Default dark sidebar colors */
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Dark sidebar colors "Bleu Nuit" */
+    --sidebar-background: 225 25% 10%; /* Sidebar encore un peu plus foncée */
+    --sidebar-foreground: 210 30% 95%; /* Texte sidebar */
+    --sidebar-primary: 217 91% 60%; /* Primaire sidebar (idem app) */
+    --sidebar-primary-foreground: 0 0% 100%; /* Texte sur primaire sidebar */
+    --sidebar-accent: 225 20% 16%; /* Accent sidebar (hover/actif) */
+    --sidebar-accent-foreground: 210 30% 95%; /* Texte sur accent sidebar */
+    --sidebar-border: 225 20% 18%; /* Bordure sidebar */
+    --sidebar-ring: 217 91% 60%; /* Anneau focus sidebar */
   }
 }
 
