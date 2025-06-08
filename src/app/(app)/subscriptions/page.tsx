@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Subscription } from "@/lib/types";
 import { Edit2, PlusCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AddEditSubscriptionDialog from "./components/add-edit-subscription-dialog";
@@ -35,7 +35,7 @@ const billingPeriodLabels: Record<Subscription['billing_period'], string> = {
   yearly: 'Annuel',
 };
 
-export default function SubscriptionsPage() {
+function SubscriptionsPageComponent() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptionsData);
   const [isAddEditSubscriptionDialogOpen, setIsAddEditSubscriptionDialogOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -43,31 +43,31 @@ export default function SubscriptionsPage() {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [subscriptionToDeleteId, setSubscriptionToDeleteId] = useState<string | null>(null);
 
-  const handleAddSubscription = () => {
+  const handleAddSubscription = useCallback(() => {
     setEditingSubscription(null);
     setIsAddEditSubscriptionDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditSubscription = (subscription: Subscription) => {
+  const handleEditSubscription = useCallback((subscription: Subscription) => {
     setEditingSubscription(subscription);
     setIsAddEditSubscriptionDialogOpen(true);
-  };
+  }, []);
 
-  const openDeleteConfirmationDialog = (subscriptionId: string) => {
+  const openDeleteConfirmationDialog = useCallback((subscriptionId: string) => {
     setSubscriptionToDeleteId(subscriptionId);
     setIsConfirmDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteSubscription = () => {
+  const confirmDeleteSubscription = useCallback(() => {
     if (subscriptionToDeleteId) {
       setSubscriptions(prev => prev.filter(s => s.id !== subscriptionToDeleteId));
       toast({ title: "Abonnement supprimé", description: "L'abonnement a été retiré de la liste (simulation)." });
       setSubscriptionToDeleteId(null);
     }
     setIsConfirmDeleteDialogOpen(false);
-  };
+  }, [subscriptionToDeleteId, toast]);
 
-  const handleSubscriptionSaved = (savedSubscription: Subscription) => {
+  const handleSubscriptionSaved = useCallback((savedSubscription: Subscription) => {
     setSubscriptions(prevSubscriptions => {
       const existingIndex = prevSubscriptions.findIndex(s => s.id === savedSubscription.id);
       if (existingIndex > -1) {
@@ -79,18 +79,18 @@ export default function SubscriptionsPage() {
       }
     });
     setIsAddEditSubscriptionDialogOpen(false);
-  };
+  }, []);
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Gestion des Abonnements</h2>
           <p className="text-muted-foreground">
             Suivez et gérez tous vos paiements récurrents.
           </p>
         </div>
-        <Button onClick={handleAddSubscription}>
+        <Button onClick={handleAddSubscription} className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" />
           Ajouter un abonnement
         </Button>
@@ -106,29 +106,29 @@ export default function SubscriptionsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Montant</TableHead>
-                        <TableHead>Période Facturation</TableHead>
-                        <TableHead>Proch. Facture</TableHead>
-                        <TableHead>Catégorie</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Nom</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Montant</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Période Facturation</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Proch. Facture</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Catégorie</TableHead>
+                        <TableHead className="text-right px-2 py-3 sm:px-4">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {subscriptions.map((sub) => (
                         <TableRow key={sub.id}>
-                            <TableCell className="font-medium">{sub.name}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium px-2 py-4 sm:px-4">{sub.name}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">
                                 {sub.amount.toLocaleString('fr-FR', { style: 'currency', currency: sub.currency })}
                             </TableCell>
-                            <TableCell>{billingPeriodLabels[sub.billing_period]}</TableCell>
-                            <TableCell>{format(new Date(sub.next_billing_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                            <TableCell>{sub.category_name || 'N/A'}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleEditSubscription(sub)} className="mr-2">
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">{billingPeriodLabels[sub.billing_period]}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">{format(new Date(sub.next_billing_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4">{sub.category_name || 'N/A'}</TableCell>
+                            <TableCell className="text-right px-2 py-4 sm:px-4">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditSubscription(sub)} className="mr-2 h-8 w-8">
                                     <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(sub.id)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(sub.id)} className="text-destructive hover:text-destructive h-8 w-8">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>
@@ -171,3 +171,7 @@ export default function SubscriptionsPage() {
     </div>
   );
 }
+
+const SubscriptionsPage = React.memo(SubscriptionsPageComponent);
+SubscriptionsPage.displayName = 'SubscriptionsPage';
+export default SubscriptionsPage;

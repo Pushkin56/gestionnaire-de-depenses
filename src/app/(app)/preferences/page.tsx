@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Currency } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Switch } from "@/components/ui/switch";
@@ -41,11 +41,11 @@ const preferencesSchema = z.object({
 type PreferencesFormValues = z.infer<typeof preferencesSchema>;
 
 
-export default function PreferencesPage() {
+function PreferencesPageComponent() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user, updateUserPreferences } = useAuth();
-  const [isNotionConnected, setIsNotionConnected] = useState(false); // Local state for Notion connection
+  const [isNotionConnected, setIsNotionConnected] = useState(false); 
 
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
@@ -67,13 +67,10 @@ export default function PreferencesPage() {
         aiForecastEnabled: user.aiForecastEnabled ?? true,
         aiInsightsEnabled: user.aiInsightsEnabled ?? true,
       });
-      // In a real app, you'd fetch this status from your backend/auth context
-      // For now, we'll keep it as a local simulation.
-      // setIsNotionConnected(user.isNotionConnected || false); 
     }
   }, [user, form]);
 
-  const onSubmit = async (data: PreferencesFormValues) => {
+  const onSubmit = useCallback(async (data: PreferencesFormValues) => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
@@ -89,26 +86,25 @@ export default function PreferencesPage() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer les préférences.", variant: "destructive" });
     }
     setIsLoading(false);
-  };
+  }, [updateUserPreferences, toast]);
 
-  const handleNotionConnect = () => {
-    // Simulate OAuth flow and connection
+  const handleNotionConnect = useCallback(() => {
     setIsLoading(true);
     setTimeout(() => {
       setIsNotionConnected(true);
       setIsLoading(false);
       toast({ title: "Notion Connecté", description: "Votre compte Notion a été connecté (simulation)." });
     }, 1500);
-  };
+  }, [toast]);
 
-  const handleNotionDisconnect = () => {
+  const handleNotionDisconnect = useCallback(() => {
     setIsLoading(true);
     setTimeout(() => {
       setIsNotionConnected(false);
       setIsLoading(false);
       toast({ title: "Notion Déconnecté", description: "Votre compte Notion a été déconnecté (simulation)." });
     }, 1000);
-  };
+  }, [toast]);
 
   return (
     <div className="space-y-6">
@@ -282,4 +278,7 @@ export default function PreferencesPage() {
     </div>
   );
 }
-    
+
+const PreferencesPage = React.memo(PreferencesPageComponent);
+PreferencesPage.displayName = 'PreferencesPage';
+export default PreferencesPage;

@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { SavingGoal, Currency } from "@/lib/types";
-import { Edit2, PlusCircle, Trash2, TrendingUp, Trophy } from "lucide-react"; // Added Trophy
-import { useState } from "react";
+import { Edit2, PlusCircle, Trash2, TrendingUp, Trophy } from "lucide-react";
+import React, { useState, useCallback } from "react";
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AddEditSavingGoalDialog from "./components/add-edit-saving-goal-dialog";
@@ -40,7 +40,7 @@ const mockCurrencies: Currency[] = [
   { code: 'XAF', name: 'Franc CFA (CEMAC)', symbol: 'FCFA', created_at: '' },
 ];
 
-export default function SavingGoalsPage() {
+function SavingGoalsPageComponent() {
   const [savingGoals, setSavingGoals] = useState<SavingGoal[]>(mockSavingGoalsData);
   const [isAddEditGoalDialogOpen, setIsAddEditGoalDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<SavingGoal | null>(null);
@@ -49,31 +49,31 @@ export default function SavingGoalsPage() {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [goalToDeleteId, setGoalToDeleteId] = useState<string | null>(null);
 
-  const handleAddGoal = () => {
+  const handleAddGoal = useCallback(() => {
     setEditingGoal(null);
     setIsAddEditGoalDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditGoal = (goal: SavingGoal) => {
+  const handleEditGoal = useCallback((goal: SavingGoal) => {
     setEditingGoal(goal);
     setIsAddEditGoalDialogOpen(true);
-  };
+  }, []);
 
-  const openDeleteConfirmationDialog = (goalId: string) => {
+  const openDeleteConfirmationDialog = useCallback((goalId: string) => {
     setGoalToDeleteId(goalId);
     setIsConfirmDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteGoal = () => {
+  const confirmDeleteGoal = useCallback(() => {
     if (goalToDeleteId) {
       setSavingGoals(prev => prev.filter(g => g.id !== goalToDeleteId));
       toast({ title: "Objectif supprimé", description: "L'objectif d'épargne a été retiré (simulation)." });
       setGoalToDeleteId(null);
     }
     setIsConfirmDeleteDialogOpen(false);
-  };
+  }, [goalToDeleteId, toast]);
 
-  const handleGoalSaved = (savedGoal: SavingGoal) => {
+  const handleGoalSaved = useCallback((savedGoal: SavingGoal) => {
     setSavingGoals(prevGoals => {
       const existingIndex = prevGoals.findIndex(g => g.id === savedGoal.id);
       if (existingIndex > -1) {
@@ -85,23 +85,23 @@ export default function SavingGoalsPage() {
       }
     });
     setIsAddEditGoalDialogOpen(false);
-  };
+  }, []);
 
-  const calculateProgress = (current: number, target: number) => {
+  const calculateProgress = useCallback((current: number, target: number) => {
     if (target <= 0) return 0;
     return Math.min(Math.round((current / target) * 100), 100);
-  };
+  }, []);
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Objectifs d'Épargne</h2>
           <p className="text-muted-foreground">
             Créez et suivez vos objectifs pour concrétiser vos projets.
           </p>
         </div>
-        <Button onClick={handleAddGoal}>
+        <Button onClick={handleAddGoal} className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" />
           Ajouter un objectif
         </Button>
@@ -207,3 +207,7 @@ export default function SavingGoalsPage() {
     </div>
   );
 }
+
+const SavingGoalsPage = React.memo(SavingGoalsPageComponent);
+SavingGoalsPage.displayName = 'SavingGoalsPage';
+export default SavingGoalsPage;

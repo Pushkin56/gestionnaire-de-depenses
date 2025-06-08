@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import { Edit2, Trash2 } from "lucide-react";
-import React, { useMemo, useState, useEffect } from "react"; // Added useEffect
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 
 // Mock Data (replace with API calls)
 const mockCategories: Category[] = [
@@ -34,7 +34,7 @@ interface TransactionListProps {
   onDeleteTransaction: (transactionId: string) => void;
 }
 
-export default function TransactionList({ onEditTransaction, onDeleteTransaction }: TransactionListProps) {
+function TransactionListComponent({ onEditTransaction, onDeleteTransaction }: TransactionListProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
   const [categories, setCategories] = useState<Category[]>(mockCategories);
   const [filterType, setFilterType] = useState<TransactionType | "all">("all");
@@ -42,16 +42,10 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
   const [filterCurrency, setFilterCurrency] = useState<string | "all">("all");
 
   useEffect(() => {
-    // Reset category filter if it's not compatible with the new transaction type
     const currentCategory = categories.find(cat => cat.id === filterCategory);
     if (filterType !== "all" && currentCategory && currentCategory.type !== filterType) {
       setFilterCategory("all");
     }
-    // If only "all" categories were shown, and a specific type is selected,
-    // it might be good to reset category to "all" to avoid empty lists if the
-    // previously selected "all" implicitly contained items of the new type.
-    // More simply, reset category when type filter changes significantly.
-    // For now, only reset if incompatible.
   }, [filterType, filterCategory, categories]);
 
   const availableCategoriesForFilter = useMemo(() => {
@@ -68,28 +62,37 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
     });
   }, [transactions, filterType, filterCategory, filterCurrency]);
 
-  const getCategoryName = (categoryId?: string) => {
+  const getCategoryName = useCallback((categoryId?: string) => {
     return categories.find(c => c.id === categoryId)?.name || 'N/A';
-  };
+  }, [categories]);
   
-  const getCategoryColor = (categoryId?: string) => {
+  const getCategoryColor = useCallback((categoryId?: string) => {
     return categories.find(c => c.id === categoryId)?.color || '#6b7280'; // Default gray
-  };
+  }, [categories]);
 
+  const handleFilterTypeChange = useCallback((value: string) => {
+    const newFilterType = value as TransactionType | "all";
+    setFilterType(newFilterType);
+    const currentCat = categories.find(c => c.id === filterCategory);
+    if (newFilterType !== "all" && currentCat && currentCat.type !== newFilterType) {
+      setFilterCategory("all");
+    }
+  }, [categories, filterCategory]);
+
+  const handleFilterCategoryChange = useCallback((value: string) => {
+    setFilterCategory(value);
+  }, []);
+
+  const handleFilterCurrencyChange = useCallback((value: string) => {
+    setFilterCurrency(value);
+  }, []);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Transactions Récentes</CardTitle>
         <div className="flex flex-col sm:flex-row gap-2 mt-4">
-            <Select value={filterType} onValueChange={(value) => {
-              setFilterType(value as TransactionType | "all");
-              // Reset category if the new type doesn't have the current category
-              const currentCat = categories.find(c => c.id === filterCategory);
-              if (value !== "all" && currentCat && currentCat.type !== value) {
-                setFilterCategory("all");
-              }
-            }}>
+            <Select value={filterType} onValueChange={handleFilterTypeChange}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -101,7 +104,7 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
             </Select>
             <Select 
               value={filterCategory} 
-              onValueChange={(value) => setFilterCategory(value)}
+              onValueChange={handleFilterCategoryChange}
               disabled={availableCategoriesForFilter.length === 0 && filterType !== "all"}
             >
                 <SelectTrigger className="w-full sm:w-[180px]">
@@ -114,7 +117,7 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
                     ))}
                 </SelectContent>
             </Select>
-            <Select value={filterCurrency} onValueChange={(value) => setFilterCurrency(value)}>
+            <Select value={filterCurrency} onValueChange={handleFilterCurrencyChange}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Devise" />
                 </SelectTrigger>
@@ -132,24 +135,24 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="px-2 py-3 sm:px-4">Date</TableHead>
+                <TableHead className="px-2 py-3 sm:px-4">Description</TableHead>
+                <TableHead className="px-2 py-3 sm:px-4">Catégorie</TableHead>
+                <TableHead className="text-right px-2 py-3 sm:px-4 whitespace-nowrap">Montant</TableHead>
+                <TableHead className="text-right px-2 py-3 sm:px-4">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
-                    <TableCell>{new Date(tx.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell className="font-medium">{tx.description || '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">{new Date(tx.date).toLocaleDateString('fr-FR')}</TableCell>
+                    <TableCell className="font-medium px-2 py-4 sm:px-4">{tx.description || '-'}</TableCell>
+                    <TableCell className="px-2 py-4 sm:px-4">
                     <Badge style={{ backgroundColor: getCategoryColor(tx.category_id), color: 'white' }} variant="secondary">
                         {getCategoryName(tx.category_id)}
                     </Badge>
                     </TableCell>
-                    <TableCell className={`text-right font-semibold ${tx.type === 'recette' ? 'text-green-600' : 'text-red-600'}`}>
+                    <TableCell className={`text-right font-semibold px-2 py-4 sm:px-4 whitespace-nowrap ${tx.type === 'recette' ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.type === 'recette' ? '+' : '-'}
                     {tx.amount.toLocaleString('fr-FR', { style: 'currency', currency: tx.currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     {tx.converted_amount && tx.converted_currency && tx.currency !== tx.converted_currency && (
@@ -158,11 +161,11 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
                         </span>
                     )}
                     </TableCell>
-                    <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => onEditTransaction(tx)} className="mr-2">
+                    <TableCell className="text-right px-2 py-4 sm:px-4">
+                    <Button variant="ghost" size="icon" onClick={() => onEditTransaction(tx)} className="mr-2 h-8 w-8">
                         <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDeleteTransaction(tx.id)} className="text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="icon" onClick={() => onDeleteTransaction(tx.id)} className="text-destructive hover:text-destructive h-8 w-8">
                         <Trash2 className="h-4 w-4" />
                     </Button>
                     </TableCell>
@@ -181,3 +184,7 @@ export default function TransactionList({ onEditTransaction, onDeleteTransaction
     </Card>
   );
 }
+
+const TransactionList = React.memo(TransactionListComponent);
+TransactionList.displayName = 'TransactionList';
+export default TransactionList;

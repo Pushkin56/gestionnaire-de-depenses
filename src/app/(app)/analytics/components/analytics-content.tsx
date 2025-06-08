@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
-import React, { useCallback } from "react"; // Ajout de React et useCallback
+import React, { useCallback } from "react";
 
 
 // Mock data for charts - using more distinct HSL colors from globals.css
@@ -140,5 +140,4 @@ function AnalyticsContentComponent() {
 
 const AnalyticsContent = React.memo(AnalyticsContentComponent);
 AnalyticsContent.displayName = 'AnalyticsContent';
-
 export default AnalyticsContent;

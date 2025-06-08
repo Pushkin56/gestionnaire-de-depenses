@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Budget } from "@/lib/types";
 import { Edit2, PlusCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AddEditBudgetDialog from "./components/add-edit-budget-dialog";
@@ -37,7 +37,7 @@ const periodLabels: Record<Budget['period'], string> = {
   yearly: 'Annuel',
 };
 
-export default function BudgetsPage() {
+function BudgetsPageComponent() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgetsData);
   const [isAddEditBudgetDialogOpen, setIsAddEditBudgetDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -45,31 +45,31 @@ export default function BudgetsPage() {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [budgetToDeleteId, setBudgetToDeleteId] = useState<string | null>(null);
 
-  const handleAddBudget = () => {
+  const handleAddBudget = useCallback(() => {
     setEditingBudget(null);
     setIsAddEditBudgetDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditBudget = (budget: Budget) => {
+  const handleEditBudget = useCallback((budget: Budget) => {
     setEditingBudget(budget);
     setIsAddEditBudgetDialogOpen(true);
-  };
+  }, []);
 
-  const openDeleteConfirmationDialog = (budgetId: string) => {
+  const openDeleteConfirmationDialog = useCallback((budgetId: string) => {
     setBudgetToDeleteId(budgetId);
     setIsConfirmDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteBudget = () => {
+  const confirmDeleteBudget = useCallback(() => {
     if (budgetToDeleteId) {
       setBudgets(prev => prev.filter(b => b.id !== budgetToDeleteId));
       toast({ title: "Budget supprimé", description: "Le budget a été retiré de la liste (simulation)." });
       setBudgetToDeleteId(null);
     }
     setIsConfirmDeleteDialogOpen(false);
-  };
+  }, [budgetToDeleteId, toast]);
 
-  const handleBudgetSaved = (savedBudget: Budget) => {
+  const handleBudgetSaved = useCallback((savedBudget: Budget) => {
     setBudgets(prevBudgets => {
       const existingIndex = prevBudgets.findIndex(b => b.id === savedBudget.id);
       if (existingIndex > -1) {
@@ -81,18 +81,18 @@ export default function BudgetsPage() {
       }
     });
     setIsAddEditBudgetDialogOpen(false);
-  };
+  }, []);
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Gestion des Budgets</h2>
           <p className="text-muted-foreground">
             Créez, suivez et gérez vos budgets pour maîtriser vos dépenses.
           </p>
         </div>
-        <Button onClick={handleAddBudget}>
+        <Button onClick={handleAddBudget} className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" />
           Ajouter un budget
         </Button>
@@ -108,27 +108,27 @@ export default function BudgetsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Catégorie</TableHead>
-                        <TableHead>Montant</TableHead>
-                        <TableHead>Période</TableHead>
-                        <TableHead>Créé le</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Catégorie</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Montant</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4">Période</TableHead>
+                        <TableHead className="px-2 py-3 sm:px-4 whitespace-nowrap">Créé le</TableHead>
+                        <TableHead className="text-right px-2 py-3 sm:px-4">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {budgets.map((budget) => (
                         <TableRow key={budget.id}>
-                            <TableCell className="font-medium">{budget.category_name}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium px-2 py-4 sm:px-4">{budget.category_name}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">
                                 {budget.amount.toLocaleString('fr-FR', { style: 'currency', currency: budget.currency })}
                             </TableCell>
-                            <TableCell>{periodLabels[budget.period]}</TableCell>
-                            <TableCell>{format(new Date(budget.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleEditBudget(budget)} className="mr-2">
+                            <TableCell className="px-2 py-4 sm:px-4">{periodLabels[budget.period]}</TableCell>
+                            <TableCell className="px-2 py-4 sm:px-4 whitespace-nowrap">{format(new Date(budget.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell className="text-right px-2 py-4 sm:px-4">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditBudget(budget)} className="mr-2 h-8 w-8">
                                     <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(budget.id)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(budget.id)} className="text-destructive hover:text-destructive h-8 w-8">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>
@@ -171,3 +171,7 @@ export default function BudgetsPage() {
     </div>
   );
 }
+
+const BudgetsPage = React.memo(BudgetsPageComponent);
+BudgetsPage.displayName = 'BudgetsPage';
+export default BudgetsPage;

@@ -110,7 +110,7 @@ function DashboardContentComponent() {
         setBudgetAlertMessage(null); return;
       }
       setIsBudgetAlertLoading(true);
-      setBudgetAlertMessage(null); // Clear previous message
+      setBudgetAlertMessage(null); 
       try {
         const currentMonthStart = startOfMonth(new Date());
         const currentMonthEnd = endOfMonth(new Date());
@@ -134,7 +134,7 @@ function DashboardContentComponent() {
       finally { setIsBudgetAlertLoading(false); }
     };
     if (user?.aiBudgetAlertsEnabled) fetchBudgetAlert(); else setBudgetAlertMessage(null);
-  }, [user, preferredCurrency, user?.aiBudgetAlertsEnabled]); 
+  }, [user, preferredCurrency]); 
 
   useEffect(() => {
     const fetchForecast = async () => {
@@ -153,7 +153,7 @@ function DashboardContentComponent() {
         finally { setIsForecastLoading(false); }
     };
     if (user?.aiForecastEnabled) fetchForecast(); else setForecastMessage(null);
-  }, [user, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol, user?.aiForecastEnabled]);
+  }, [user, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
 
   useEffect(() => {
     const fetchTrendAnalysis = async () => {
@@ -197,7 +197,7 @@ function DashboardContentComponent() {
       setTrendMessage(null);
       setHabitAnalysisMessage(null);
     }
-  }, [user, preferredCurrencySymbol, user?.aiInsightsEnabled]); 
+  }, [user, preferredCurrencySymbol]); 
 
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
@@ -265,13 +265,13 @@ function DashboardContentComponent() {
     return "default";
   }, [spendingPercentage]);
   
-  const handleAddTransactionDialogClose = (isOpen: boolean) => {
+  const handleAddTransactionDialogClose = useCallback((isOpen: boolean) => {
     setIsAddTransactionOpen(isOpen);
     if (!isOpen) {
       setVoiceDataToPreFill(null); 
       setEditingTransaction(null); 
     }
-  };
+  }, []);
 
 
   return (
@@ -385,6 +385,4 @@ function DashboardContentComponent() {
 
 const DashboardContent = React.memo(DashboardContentComponent);
 DashboardContent.displayName = 'DashboardContent';
-
 export default DashboardContent;
-
