@@ -4,6 +4,7 @@
 import { DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import UserNav from './user-nav';
+import { ThemeToggleButton } from './theme-toggle-button';
 
 interface AppHeaderProps {
   username: string;
@@ -22,6 +23,7 @@ export default function AppHeader({ username }: AppHeaderProps) {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
+          <ThemeToggleButton />
           <span className="text-sm text-muted-foreground hidden sm:inline-block">
             Bienvenue, {username}
           </span>
