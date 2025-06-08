@@ -100,3 +100,17 @@ export interface Subscription {
   created_at: string;
   updated_at: string;
 }
+
+export interface SavingGoal {
+  id: string;
+  user_id: string;
+  name: string;
+  emoji?: string; // Optional: for visual flair
+  target_amount: number;
+  current_amount: number;
+  currency: string; // e.g. EUR, USD
+  currency_symbol: string; // e.g. €, $
+  target_date?: string | null; // Optional: ISO date string e.g. "2024-12-31"
+  created_at: string;
+  updated_at: string;
+}
