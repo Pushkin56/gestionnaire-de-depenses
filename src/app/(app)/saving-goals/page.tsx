@@ -30,9 +30,14 @@ const mockSavingGoalsData: SavingGoal[] = [
   { id: 'sg3', user_id: '1', name: 'Fonds d\'urgence', emoji: '🛡️', target_amount: 5000, current_amount: 5000, currency: 'EUR', currency_symbol: '€', target_date: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
+// Updated to be consistent with PreferencesPage mockCurrencies
 const mockCurrencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', created_at: '' },
   { code: 'USD', name: 'US Dollar', symbol: '$', created_at: '' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', created_at: '' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', created_at: '' },
+  { code: 'XOF', name: 'Franc CFA (UEMOA)', symbol: 'FCFA', created_at: '' },
+  { code: 'XAF', name: 'Franc CFA (CEMAC)', symbol: 'FCFA', created_at: '' },
 ];
 
 export default function SavingGoalsPage() {
