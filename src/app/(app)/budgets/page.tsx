@@ -9,13 +9,16 @@ import { Edit2, PlusCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import AddEditBudgetDialog from "./components/add-edit-budget-dialog"; // Import the dialog
+import { useToast } from "@/hooks/use-toast";
+
 
 // Mock Data - replace with API calls and state management
 const mockBudgetsData: Budget[] = [
   { id: 'bud1', user_id: '1', category_id: 'cat1', category_name: 'Alimentation', amount: 300, currency: 'EUR', currency_symbol: '€', period: 'monthly', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'bud2', user_id: '1', category_id: 'cat4', category_name: 'Loisirs', amount: 100, currency: 'EUR', currency_symbol: '€', period: 'monthly', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'bud3', user_id: '1', category_id: 'cat3', category_name: 'Transport', amount: 80, currency: 'EUR', currency_symbol: '€', period: 'weekly', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'bud4', user_id: '1', category_id: 'cat2', category_name: 'Salaire', amount: 2000, currency: 'EUR', currency_symbol: '€', period: 'monthly', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, // Technically a budget on income, less common but possible
+  { id: 'bud4', user_id: '1', category_id: 'cat2', category_name: 'Salaire', amount: 2000, currency: 'EUR', currency_symbol: '€', period: 'monthly', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const periodLabels: Record<Budget['period'], string> = {
@@ -26,22 +29,40 @@ const periodLabels: Record<Budget['period'], string> = {
 
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgetsData);
-  // TODO: Add state for managing add/edit budget dialog
+  const [isAddEditBudgetDialogOpen, setIsAddEditBudgetDialogOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const { toast } = useToast();
 
   const handleAddBudget = () => {
-    // TODO: Open dialog to add budget
-    console.log("Add budget clicked");
+    setEditingBudget(null); // Ensure we are adding, not editing
+    setIsAddEditBudgetDialogOpen(true);
   };
 
   const handleEditBudget = (budget: Budget) => {
-    // TODO: Open dialog to edit budget
-    console.log("Edit budget:", budget);
+    setEditingBudget(budget);
+    setIsAddEditBudgetDialogOpen(true);
   };
 
   const handleDeleteBudget = (budgetId: string) => {
-    // TODO: Implement delete logic with confirmation
-    console.log("Delete budget:", budgetId);
-    setBudgets(prev => prev.filter(b => b.id !== budgetId)); // Mock delete
+    // TODO: Implement proper delete logic with confirmation dialog
+    setBudgets(prev => prev.filter(b => b.id !== budgetId));
+    toast({ title: "Budget supprimé", description: "Le budget a été retiré de la liste (simulation)." });
+  };
+
+  const handleBudgetSaved = (savedBudget: Budget) => {
+    setBudgets(prevBudgets => {
+      const existingIndex = prevBudgets.findIndex(b => b.id === savedBudget.id);
+      if (existingIndex > -1) {
+        // Update existing budget
+        const updatedBudgets = [...prevBudgets];
+        updatedBudgets[existingIndex] = savedBudget;
+        return updatedBudgets;
+      } else {
+        // Add new budget
+        return [...prevBudgets, savedBudget];
+      }
+    });
+    setIsAddEditBudgetDialogOpen(false); // Close dialog after saving
   };
   
   return (
@@ -107,7 +128,15 @@ export default function BudgetsPage() {
           </div>
         </CardContent>
       </Card>
-      {/* TODO: Add Dialog for Add/Edit Budget Form */}
+      
+      <AddEditBudgetDialog
+        open={isAddEditBudgetDialogOpen}
+        onOpenChange={setIsAddEditBudgetDialogOpen}
+        onBudgetSaved={handleBudgetSaved}
+        budgetToEdit={editingBudget}
+      />
     </div>
   );
 }
+
+    
