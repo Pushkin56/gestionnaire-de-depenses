@@ -15,6 +15,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 
 // Mock Data
@@ -30,7 +32,9 @@ const mockCurrencies: Currency[] = [
 const preferencesSchema = z.object({
   username: z.string().min(1, "Le nom d'utilisateur est requis.").max(50, "Le nom d'utilisateur ne doit pas dépasser 50 caractères."),
   primary_currency: z.string().min(1, "La devise principale est requise."),
-  // Add other preferences here, e.g., theme, notifications
+  aiBudgetAlertsEnabled: z.boolean().optional(),
+  aiForecastEnabled: z.boolean().optional(),
+  aiTrendAnalysisEnabled: z.boolean().optional(),
 });
 
 type PreferencesFormValues = z.infer<typeof preferencesSchema>;
@@ -46,6 +50,9 @@ export default function PreferencesPage() {
     defaultValues: {
       username: user?.username || '',
       primary_currency: user?.primary_currency || 'EUR',
+      aiBudgetAlertsEnabled: user?.aiBudgetAlertsEnabled ?? true,
+      aiForecastEnabled: user?.aiForecastEnabled ?? true,
+      aiTrendAnalysisEnabled: user?.aiTrendAnalysisEnabled ?? true,
     },
   });
 
@@ -54,16 +61,24 @@ export default function PreferencesPage() {
       form.reset({
         username: user.username || '',
         primary_currency: user.primary_currency || 'EUR',
+        aiBudgetAlertsEnabled: user.aiBudgetAlertsEnabled ?? true,
+        aiForecastEnabled: user.aiForecastEnabled ?? true,
+        aiTrendAnalysisEnabled: user.aiTrendAnalysisEnabled ?? true,
       });
     }
   }, [user, form]);
 
   const onSubmit = async (data: PreferencesFormValues) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      updateUserPreferences({ username: data.username, primary_currency: data.primary_currency });
+      updateUserPreferences({ 
+        username: data.username, 
+        primary_currency: data.primary_currency,
+        aiBudgetAlertsEnabled: data.aiBudgetAlertsEnabled,
+        aiForecastEnabled: data.aiForecastEnabled,
+        aiTrendAnalysisEnabled: data.aiTrendAnalysisEnabled,
+      });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'enregistrer les préférences.", variant: "destructive" });
@@ -76,7 +91,7 @@ export default function PreferencesPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Préférences Utilisateur</h2>
         <p className="text-muted-foreground">
-          Gérez vos paramètres personnels pour l'application.
+          Gérez vos paramètres personnels et les fonctionnalités IA de l'application.
         </p>
       </div>
 
@@ -129,10 +144,75 @@ export default function PreferencesPage() {
                   </FormItem>
                 )}
               />
-              {/* Add more preference fields here, e.g.,
-              <FormField name="theme" ... />
-              <FormField name="notifications_enabled" ... />
-              */}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Fonctionnalités d'Intelligence Artificielle</CardTitle>
+                <CardDescription>Activez ou désactivez les assistants IA pour vous aider à gérer vos finances.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <FormField
+                    control={form.control}
+                    name="aiBudgetAlertsEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Conseiller Budgétaire IA</FormLabel>
+                                <FormDescription>
+                                Recevez des alertes et conseils lorsque vous approchez des limites de votre budget.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="aiForecastEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Prévisionnel de Fin de Mois IA</FormLabel>
+                                <FormDescription>
+                                Obtenez une estimation de votre solde en fin de mois basée sur vos habitudes.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="aiTrendAnalysisEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Analyse des Tendances IA</FormLabel>
+                                <FormDescription>
+                                Laissez l'IA identifier des tendances notables dans vos dépenses mensuelles.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={isLoading}>

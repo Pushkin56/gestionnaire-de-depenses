@@ -13,7 +13,7 @@ interface AuthContextType {
   login: (email: string, username?: string) => void; // username for signup then login
   signup: (username: string, email: string) => void;
   logout: () => void;
-  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency' | 'username'>>) => void;
+  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency' | 'username' | 'aiBudgetAlertsEnabled' | 'aiForecastEnabled' | 'aiTrendAnalysisEnabled'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +27,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Simulate checking auth state from localStorage or a cookie
     const storedUser = localStorage.getItem('budgetbento_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      // Ensure new AI preference fields have default values if not present
+      setUser({
+        aiBudgetAlertsEnabled: true, // Default to true
+        aiForecastEnabled: true,     // Default to true
+        aiTrendAnalysisEnabled: true, // Default to true
+        ...parsedUser,
+      });
     }
     setIsLoading(false);
   }, []);
@@ -38,6 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       username: usernameFromSignup || email.split('@')[0] || 'Utilisateur Anonyme',
       primary_currency: 'EUR', // Default primary currency
+      aiBudgetAlertsEnabled: true, // Default to true
+      aiForecastEnabled: true,     // Default to true
+      aiTrendAnalysisEnabled: true, // Default to true
     };
     localStorage.setItem('budgetbento_user', JSON.stringify(mockUser));
     setUser(mockUser);
@@ -55,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/auth');
   };
 
-  const updateUserPreferences = (prefs: Partial<Pick<User, 'primary_currency' | 'username'>>) => {
+  const updateUserPreferences = (prefs: Partial<User>) => {
     setUser(currentUser => {
       if (!currentUser) return null;
       const updatedUser = { ...currentUser, ...prefs };

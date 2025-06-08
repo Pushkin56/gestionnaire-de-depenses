@@ -54,7 +54,10 @@ export interface User {
   id: string;
   email: string;
   username: string;
-  primary_currency?: string; // Added for user's preferred currency
+  primary_currency?: string;
+  aiBudgetAlertsEnabled?: boolean;
+  aiForecastEnabled?: boolean;
+  aiTrendAnalysisEnabled?: boolean;
 }
 
 // Props for chart components

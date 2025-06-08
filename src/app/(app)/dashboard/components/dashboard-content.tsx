@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, Settings2, BarChart2, Lightbulb } from "lucide-react"; // Added BarChart2, Lightbulb
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb } from "lucide-react"; // Added BarChart2, Lightbulb
 import React, { useState, useEffect, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
@@ -15,10 +15,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-flow";
 import { getMonthlyForecast, type MonthlyForecastInput } from "@/ai/flows/monthly-forecast-flow";
-import { getExpenseTrend, type ExpenseTrendInput } from "@/ai/flows/expense-trend-flow"; // Import new flow
+import { getExpenseTrend, type ExpenseTrendInput } from "@/ai/flows/expense-trend-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
 
 // Mock data for stats
@@ -60,20 +58,15 @@ const mockDashboardSubscriptions: Subscription[] = [
     { id: 'sub-streaming', user_id: '1', name: 'Streaming Service', amount: 10, currency: 'EUR', currency_symbol: '€', billing_period: 'monthly', next_billing_date: format(new Date(), 'yyyy-MM-dd'), category_id: 'cat-loisirs', category_name: 'Loisirs', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
-// Mock data for trend analysis
 const mockLeisureSpending = {
     category_name: 'Loisirs',
-    current_month_spending: 120, // Example spending
-    previous_month_spending: 70, // Example previous spending
+    current_month_spending: 120,
+    previous_month_spending: 70,
 };
-
 
 const currencySymbols: { [key: string]: string } = {
-    EUR: '€',
-    USD: '$',
-    GBP: '£',
+    EUR: '€', USD: '$', GBP: '£', JPY: '¥', XOF: 'FCFA', XAF: 'FCFA'
 };
-
 
 function DashboardContentComponent() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -85,34 +78,23 @@ function DashboardContentComponent() {
   const [budgetAlertMessage, setBudgetAlertMessage] = useState<string | null>(null);
   const [isBudgetAlertLoading, setIsBudgetAlertLoading] = useState<boolean>(false);
   const [spendingPercentage, setSpendingPercentage] = useState<number>(0);
-  const [aiBudgetAlertsEnabled, setAiBudgetAlertsEnabled] = useState<boolean>(true);
-
+  
   const [forecastMessage, setForecastMessage] = useState<string | null>(null);
   const [isForecastLoading, setIsForecastLoading] = useState<boolean>(false);
-  const [aiForecastEnabled, setAiForecastEnabled] = useState<boolean>(true);
 
   const [trendMessage, setTrendMessage] = useState<string | null>(null);
   const [isTrendLoading, setIsTrendLoading] = useState<boolean>(false);
-  const [aiTrendAnalysisEnabled, setAiTrendAnalysisEnabled] = useState<boolean>(true);
-
 
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
   const preferredCurrencySymbol = currencySymbols[preferredCurrency] || preferredCurrency;
 
-  useEffect(() => {
-    const storedBudgetAlertPref = localStorage.getItem('budgetBentoAiBudgetAlertsEnabled');
-    if (storedBudgetAlertPref !== null) setAiBudgetAlertsEnabled(JSON.parse(storedBudgetAlertPref));
-    
-    const storedForecastPref = localStorage.getItem('budgetBentoAiForecastEnabled');
-    if (storedForecastPref !== null) setAiForecastEnabled(JSON.parse(storedForecastPref));
-
-    const storedTrendPref = localStorage.getItem('budgetBentoAiTrendAnalysisEnabled');
-    if (storedTrendPref !== null) setAiTrendAnalysisEnabled(JSON.parse(storedTrendPref));
-  }, []);
+  // AI Feature Preferences from AuthContext
+  const aiBudgetAlertsEnabled = user?.aiBudgetAlertsEnabled ?? true;
+  const aiForecastEnabled = user?.aiForecastEnabled ?? true;
+  const aiTrendAnalysisEnabled = user?.aiTrendAnalysisEnabled ?? true;
 
   useEffect(() => {
-    localStorage.setItem('budgetBentoAiBudgetAlertsEnabled', JSON.stringify(aiBudgetAlertsEnabled));
     const fetchBudgetAlert = async () => {
       if (!user || mockFoodBudget.currency !== preferredCurrency || !aiBudgetAlertsEnabled) {
         setBudgetAlertMessage(null); return;
@@ -144,7 +126,6 @@ function DashboardContentComponent() {
   }, [user, preferredCurrency, aiBudgetAlertsEnabled]); 
 
   useEffect(() => {
-    localStorage.setItem('budgetBentoAiForecastEnabled', JSON.stringify(aiForecastEnabled));
     const fetchForecast = async () => {
         if (!user || !aiForecastEnabled) { setForecastMessage(null); return; }
         setIsForecastLoading(true);
@@ -160,10 +141,9 @@ function DashboardContentComponent() {
         finally { setIsForecastLoading(false); }
     };
     if (aiForecastEnabled) fetchForecast(); else setForecastMessage(null);
-  }, [user, preferredCurrency, aiForecastEnabled, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
+  }, [user, aiForecastEnabled, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
 
   useEffect(() => {
-    localStorage.setItem('budgetBentoAiTrendAnalysisEnabled', JSON.stringify(aiTrendAnalysisEnabled));
     const fetchTrendAnalysis = async () => {
         if (!user || !aiTrendAnalysisEnabled) { setTrendMessage(null); return; }
         setIsTrendLoading(true);
@@ -182,7 +162,6 @@ function DashboardContentComponent() {
     };
     if (aiTrendAnalysisEnabled) fetchTrendAnalysis(); else setTrendMessage(null);
   }, [user, aiTrendAnalysisEnabled, preferredCurrencySymbol]);
-
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
@@ -226,7 +205,7 @@ function DashboardContentComponent() {
 
   const getBudgetAlertVariant = useCallback((): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default";
+    if (spendingPercentage > 80) return "default"; // This will be styled for orange below
     return "default";
   }, [spendingPercentage]);
 
@@ -252,18 +231,15 @@ function DashboardContentComponent() {
       <div className="space-y-4">
         {aiBudgetAlertsEnabled && isBudgetAlertLoading && ( <Alert className="bg-muted"> <Info className="h-5 w-5" /> <AlertTitle>Conseiller budgétaire IA</AlertTitle> <AlertDescription>Analyse de votre budget en cours...</AlertDescription> </Alert> )}
         {aiBudgetAlertsEnabled && !isBudgetAlertLoading && budgetAlertMessage && ( <Alert variant={getBudgetAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}> {getBudgetAlertIcon()} <AlertTitle>Conseiller budgétaire IA</AlertTitle> <AlertDescription> {budgetAlertMessage} </AlertDescription> </Alert> )}
+        
         {aiForecastEnabled && isForecastLoading && ( <Alert className="bg-muted"> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription>Calcul de votre prévision en cours...</AlertDescription> </Alert> )}
         {aiForecastEnabled && !isForecastLoading && forecastMessage && ( <Alert> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription> {forecastMessage} </AlertDescription> </Alert> )}
+        
         {aiTrendAnalysisEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
         {aiTrendAnalysisEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 my-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card"> <Switch id="ai-budget-alerts-toggle" checked={aiBudgetAlertsEnabled} onCheckedChange={setAiBudgetAlertsEnabled} aria-label="Activer ou désactiver les alertes budgétaires IA" /> <Label htmlFor="ai-budget-alerts-toggle" className="cursor-pointer text-sm font-medium"> Conseiller Budgétaire </Label> </div>
-            <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card"> <Switch id="ai-forecast-toggle" checked={aiForecastEnabled} onCheckedChange={setAiForecastEnabled} aria-label="Activer ou désactiver le prévisionnel de fin de mois IA" /> <Label htmlFor="ai-forecast-toggle" className="cursor-pointer text-sm font-medium"> Prévisionnel Fin de Mois </Label> </div>
-            <div className="flex items-center space-x-2 p-2 border rounded-lg shadow-sm bg-card"> <Switch id="ai-trend-analysis-toggle" checked={aiTrendAnalysisEnabled} onCheckedChange={setAiTrendAnalysisEnabled} aria-label="Activer ou désactiver l'analyse des tendances IA" /> <Label htmlFor="ai-trend-analysis-toggle" className="cursor-pointer text-sm font-medium"> Analyse des Tendances </Label> </div>
-        </div>
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 my-4">
         <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleExportExcel}> <Download className="mr-2 h-4 w-4" /> Exporter en Excel </Button>
           <Button variant="outline" onClick={handleExportPdf}> <Download className="mr-2 h-4 w-4" /> Exporter en PDF </Button>
