@@ -2,14 +2,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb, Sparkles, ClipboardList } from "lucide-react"; // Added Sparkles, ClipboardList
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb, Sparkles, ClipboardList, Mic } from "lucide-react"; // Added Mic
 import React, { useState, useEffect, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
 import StatCard from "./stat-card";
 import TransactionList from "./transaction-list";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
-import type { Transaction, Category as AppCategory, Budget, Subscription } from "@/lib/types";
+import type { Transaction, Category as AppCategory, Budget, Subscription, InterpretedVoiceExpense } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
@@ -19,6 +19,7 @@ import { getExpenseTrend, type ExpenseTrendInput } from "@/ai/flows/expense-tren
 import { getHabitAnalysis, type HabitAnalysisInput } from "@/ai/flows/habit-analysis-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, isWithinInterval, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
+import VoiceInputDialog from "./voice-input-dialog"; // Added VoiceInputDialog
 
 // Mock data for stats
 const mockStats = {
@@ -94,15 +95,17 @@ function DashboardContentComponent() {
 
   const [habitAnalysisMessage, setHabitAnalysisMessage] = useState<string | null>(null);
   const [isHabitAnalysisLoading, setIsHabitAnalysisLoading] = useState<boolean>(false);
+  
+  const [isVoiceInputOpen, setIsVoiceInputOpen] = useState(false); // State for voice input dialog
+
 
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
   const preferredCurrencySymbol = currencySymbols[preferredCurrency] || preferredCurrency;
 
-  // AI Feature Preferences from AuthContext
   const aiBudgetAlertsEnabled = user?.aiBudgetAlertsEnabled ?? true;
   const aiForecastEnabled = user?.aiForecastEnabled ?? true;
-  const aiInsightsEnabled = user?.aiInsightsEnabled ?? true; // Combined insights preference
+  const aiInsightsEnabled = user?.aiInsightsEnabled ?? true; 
 
   useEffect(() => {
     const fetchBudgetAlert = async () => {
@@ -155,7 +158,7 @@ function DashboardContentComponent() {
 
   useEffect(() => {
     const fetchTrendAnalysis = async () => {
-        if (!user || !aiInsightsEnabled) { setTrendMessage(null); return; } // Use combined preference
+        if (!user || !aiInsightsEnabled) { setTrendMessage(null); return; } 
         setIsTrendLoading(true);
         try {
             const input: ExpenseTrendInput = { 
@@ -170,12 +173,12 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching expense trend:", error); setTrendMessage("Impossible d'analyser les tendances pour le moment.");}
         finally { setIsTrendLoading(false); }
     };
-    if (aiInsightsEnabled) fetchTrendAnalysis(); else setTrendMessage(null); // Use combined preference
-  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); // Depend on combined preference
+    if (aiInsightsEnabled) fetchTrendAnalysis(); else setTrendMessage(null); 
+  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); 
 
   useEffect(() => {
     const fetchHabitAnalysis = async () => {
-        if (!user || !aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } // Use combined preference
+        if (!user || !aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } 
         setIsHabitAnalysisLoading(true);
         try {
             const input: HabitAnalysisInput = { 
@@ -189,12 +192,13 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
         finally { setIsHabitAnalysisLoading(false); }
     };
-    if (aiInsightsEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null); // Use combined preference
-  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); // Depend on combined preference
+    if (aiInsightsEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null); 
+  }, [user, aiInsightsEnabled, preferredCurrencySymbol]); 
 
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
+    // Here you would typically update a global state or refetch transactions
     toast({ title: transaction.id.startsWith('tx-') ? "Transaction ajoutée" : "Transaction modifiée", description: "Votre transaction a été enregistrée (simulation)." });
   }, [toast]);
 
@@ -212,6 +216,30 @@ function DashboardContentComponent() {
     setEditingTransaction(null);
     setIsAddTransactionOpen(true);
   }, []);
+  
+  const openVoiceInputDialog = useCallback(() => {
+    setIsVoiceInputOpen(true);
+  }, []);
+
+  const handleVoiceInterpretationComplete = useCallback((data: InterpretedVoiceExpense) => {
+    console.log("Interpreted data from voice:", data);
+    // TODO: Next step would be to pre-fill AddTransactionDialog with this data
+    // For now, maybe show a toast with the interpreted data
+    if (data.error) {
+        toast({variant: "destructive", title: "Erreur d'interprétation vocale", description: data.error});
+    } else if (!data.amount) {
+        toast({variant: "destructive", title: "Erreur d'interprétation vocale", description: "Le montant n'a pas pu être déterminé."});
+    } else {
+        toast({
+            title: "Interprétation vocale (démo)",
+            description: `Montant: ${data.amount || 'N/A'} ${data.currency || ''}, Desc: ${data.description_suggestion || 'N/A'}`,
+        });
+        // Here you could set state to pass to AddTransactionDialog or open it directly
+        // setEditingTransaction(transformed_data_to_transaction_like_object);
+        // setIsAddTransactionOpen(true);
+    }
+  }, [toast]);
+
 
   const handleExportExcel = useCallback(() => {
     try { exportTransactionsToExcel(mockTransactionsForExport); toast({ title: "Exportation Excel réussie", description: "Le fichier Excel a été téléchargé." }); } 
@@ -235,7 +263,7 @@ function DashboardContentComponent() {
 
   const getBudgetAlertVariant = useCallback((): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default"; // This will be styled for orange below
+    if (spendingPercentage > 80) return "default"; 
     return "default";
   }, [spendingPercentage]);
 
@@ -244,9 +272,13 @@ function DashboardContentComponent() {
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+           <Button onClick={openVoiceInputDialog} variant="outline" className="w-full sm:w-auto">
+            <Mic className="mr-2 h-5 w-5" />
+            Ajout Vocal
+          </Button>
           <Button onClick={openAddTransactionDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
             <PlusCircle className="mr-2 h-5 w-5" />
-            Ajouter une transaction
+            Ajouter Transaction
           </Button>
         </div>
       </div>
@@ -265,7 +297,6 @@ function DashboardContentComponent() {
         {aiForecastEnabled && isForecastLoading && ( <Alert className="bg-muted"> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription>Calcul de votre prévision en cours...</AlertDescription> </Alert> )}
         {aiForecastEnabled && !isForecastLoading && forecastMessage && ( <Alert> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription> {forecastMessage} </AlertDescription> </Alert> )}
         
-        {/* Combined Insights Section */}
         {aiInsightsEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçus IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
         {aiInsightsEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçu des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
 
@@ -282,6 +313,7 @@ function DashboardContentComponent() {
 
       <TransactionList onEditTransaction={handleEditTransaction} onDeleteTransaction={handleDeleteTransaction} />
       <AddTransactionDialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen} onTransactionAdded={handleTransactionAdded} transactionToEdit={editingTransaction} />
+      <VoiceInputDialog open={isVoiceInputOpen} onOpenChange={setIsVoiceInputOpen} onInterpretationComplete={handleVoiceInterpretationComplete} />
     </div>
   );
 }
@@ -290,5 +322,4 @@ const DashboardContent = React.memo(DashboardContentComponent);
 DashboardContent.displayName = 'DashboardContent';
 
 export default DashboardContent;
-
     

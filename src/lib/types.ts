@@ -57,7 +57,7 @@ export interface User {
   primary_currency?: string;
   aiBudgetAlertsEnabled?: boolean;
   aiForecastEnabled?: boolean;
-  aiInsightsEnabled?: boolean; // Fusion des anciennes aiTrendAnalysisEnabled et aiHabitAnalysisEnabled
+  aiInsightsEnabled?: boolean; 
 }
 
 // Props for chart components
@@ -115,4 +115,14 @@ export interface SavingGoal {
   updated_at: string;
 }
 
+export interface InterpretedVoiceExpense {
+  amount?: number;
+  currency?: string; // Code, e.g., EUR, USD. The IA should try to infer or use the provided preferred_currency.
+  category_suggestion?: string;
+  date_suggestion?: string; // YYYY-MM-DD format
+  description_suggestion?: string;
+  type?: TransactionType; // 'recette' | 'depense', default to 'depense'
+  error?: string; // In case of interpretation failure or missing crucial info
+  original_text?: string; // The transcribed text, for reference
+}
     
