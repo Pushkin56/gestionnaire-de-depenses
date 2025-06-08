@@ -19,9 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    // allowedDevOrigins has been moved to the top level
-  },
+  // experimental block removed as it was empty after moving allowedDevOrigins
   allowedDevOrigins: [
     'https://6000-firebase-studio-1749368536748.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev',
   ],
