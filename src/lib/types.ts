@@ -69,3 +69,16 @@ export interface TimeSeriesDataPoint {
   value: number;
   value2?: number; // For charts with multiple series like balance (income/expense)
 }
+
+export interface Budget {
+  id: string;
+  user_id: string;
+  category_id: string;
+  category_name: string;
+  amount: number;
+  currency: string; // e.g. EUR, USD
+  currency_symbol: string; // e.g. €, $
+  period: 'monthly' | 'weekly' | 'yearly';
+  created_at: string;
+  updated_at: string;
+}
