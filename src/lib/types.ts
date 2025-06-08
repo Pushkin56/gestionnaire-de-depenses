@@ -82,3 +82,18 @@ export interface Budget {
   created_at: string;
   updated_at: string;
 }
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  currency_symbol: string;
+  billing_period: 'monthly' | 'yearly' | 'weekly';
+  next_billing_date: string; // ISO date string e.g. "2023-10-26"
+  category_id?: string; // Optional: link to an expense category
+  category_name?: string; // Optional: for display
+  created_at: string;
+  updated_at: string;
+}

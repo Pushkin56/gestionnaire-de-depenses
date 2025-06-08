@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { FolderOpen, LogOut, Settings, User as UserIcon, Target } from "lucide-react"; // Added Target icon
+import { FolderOpen, LogOut, Settings, User as UserIcon, Target, Repeat } from "lucide-react"; // Added Repeat icon
 import Link from "next/link";
 
 export default function UserNav() {
@@ -63,6 +63,12 @@ export default function UserNav() {
             <DropdownMenuItem>
               <Target className="mr-2 h-4 w-4" />
               <span>Budgets</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/subscriptions" passHref>
+            <DropdownMenuItem>
+              <Repeat className="mr-2 h-4 w-4" />
+              <span>Abonnements</span>
             </DropdownMenuItem>
           </Link>
           <Link href="/preferences" passHref>
