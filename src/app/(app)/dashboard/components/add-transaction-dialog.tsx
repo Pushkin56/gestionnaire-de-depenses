@@ -32,6 +32,9 @@ const mockCurrencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', created_at: '' },
   { code: 'USD', name: 'US Dollar', symbol: '$', created_at: '' },
   { code: 'GBP', name: 'British Pound', symbol: '£', created_at: '' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', created_at: '' },
+  { code: 'XOF', name: 'Franc CFA (UEMOA)', symbol: 'FCFA', created_at: '' },
+  { code: 'XAF', name: 'Franc CFA (CEMAC)', symbol: 'FCFA', created_at: '' },
 ];
 
 const transactionFormSchema = z.object({
@@ -42,7 +45,7 @@ const transactionFormSchema = z.object({
   date: z.date({ required_error: "La date est requise." }),
   description: z.string().optional(),
   // Optional conversion fields
-  // convert_to_currency: z.string().optional(), 
+  // convert_to_currency: z.string().optional(),
   // converted_amount: z.coerce.number().optional(),
 });
 
@@ -58,7 +61,7 @@ interface AddTransactionDialogProps {
 export default function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, transactionToEdit }: AddTransactionDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
@@ -194,7 +197,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                       </FormControl>
                       <SelectContent>
                         {mockCurrencies.map(c => (
-                          <SelectItem key={c.code} value={c.code}>{c.code} - {c.name}</SelectItem>
+                          <SelectItem key={c.code} value={c.code}>{c.code} - {c.name} ({c.symbol})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -226,7 +229,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="date"

@@ -11,7 +11,7 @@ import TransactionList from "./transaction-list";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import type { Transaction, Category as AppCategory } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth-context"; 
+import { useAuth } from "@/contexts/auth-context";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 
 // Mock data for stats
@@ -40,10 +40,10 @@ export default function DashboardContent() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
   const stats = mockStats;
-  const preferredCurrency = user?.primary_currency || 'EUR'; 
+  const preferredCurrency = user?.primary_currency || 'EUR';
 
   const handleTransactionAdded = (transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
@@ -58,9 +58,9 @@ export default function DashboardContent() {
     console.log("Delete transaction:", transactionId);
     toast({ title: "Suppression", description: "Transaction supprimée (simulation)." });
   };
-  
+
   const openAddTransactionDialog = () => {
-    setEditingTransaction(null); 
+    setEditingTransaction(null);
     setIsAddTransactionOpen(true);
   };
 
@@ -95,17 +95,6 @@ export default function DashboardContent() {
           </Button>
         </div>
       </div>
-       <div className="flex flex-col sm:flex-row justify-end items-center gap-2 mt-0 sm:-mt-12"> {/* Adjusted margin for alignment */}
-          <Button variant="outline" onClick={handleExportExcel}>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter en Excel
-          </Button>
-          <Button variant="outline" onClick={handleExportPdf}>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter en PDF
-          </Button>
-        </div>
-
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -131,14 +120,25 @@ export default function DashboardContent() {
         />
         <StatCard
           title="Nombre de Transactions"
-          value={stats.transactionCount} 
+          value={stats.transactionCount}
           icon={ListFilter}
           description="Transactions sur la période"
         />
       </div>
 
-      <TransactionList 
-        onEditTransaction={handleEditTransaction} 
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-2 mb-4">
+          <Button variant="outline" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Exporter en Excel
+          </Button>
+          <Button variant="outline" onClick={handleExportPdf}>
+            <Download className="mr-2 h-4 w-4" />
+            Exporter en PDF
+          </Button>
+        </div>
+
+      <TransactionList
+        onEditTransaction={handleEditTransaction}
         onDeleteTransaction={handleDeleteTransaction}
       />
 
