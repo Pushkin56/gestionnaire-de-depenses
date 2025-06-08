@@ -77,6 +77,9 @@ function AnalyticsContentComponent() {
   const handleExportPdf = () => {
     try {
       exportTransactionsToPdf(mockTransactionsForExport);
+      // Note: exportTransactionsToPdf currently shows an alert and logs a warning.
+      // If it were to succeed, a success toast would be appropriate here.
+      // toast({ title: "Exportation PDF initiée", description: "Le fichier PDF sera téléchargé." });
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
       toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
