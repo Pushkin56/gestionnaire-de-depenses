@@ -125,4 +125,43 @@ export interface InterpretedVoiceExpense {
   error?: string; // In case of interpretation failure or missing crucial info
   original_text?: string; // The transcribed text, for reference
 }
+
+// Types for Store/Stock Module
+export interface StockCategory {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string; // Optional description
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockItem {
+  id: string;
+  user_id: string;
+  stock_category_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number; // Fixed unit price
+  currency: string; // Currency code like EUR, USD
+  currency_symbol: string; // Currency symbol like €, $
+  low_stock_threshold?: number; // Optional: for alerts
+  created_at: string;
+  updated_at: string;
+  // category?: StockCategory; // Optional: for populated data
+}
+
+export type StockMovementType = 'in' | 'out' | 'adjustment';
+
+export interface StockMovement {
+  id: string;
+  user_id: string;
+  stock_item_id: string;
+  type: StockMovementType;
+  quantity: number; // Positive for 'in'/'adjustment', negative or positive for 'out' depending on convention
+  price_at_movement?: number; // Price per unit at the time of movement, if it can vary
+  reason?: string; // e.g., "Sale", "Initial Stock", "Spoilage"
+  notes?: string;
+  created_at: string; // Timestamp of the movement
+}
     
