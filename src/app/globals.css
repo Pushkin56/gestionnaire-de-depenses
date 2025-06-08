@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,6 +38,14 @@ body {
 
     --ring: 217 91% 60%;
     --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 217 91% 60%; /* Blue (Matches primary) */
+    --chart-2: 259 91% 60%; /* Purple (Matches accent) */
+    --chart-3: 142 70% 40%; /* Green */
+    --chart-4: 0 75% 55%;   /* Red */
+    --chart-5: 38 90% 50%;  /* Orange */
+
 
     /* Default sidebar colors, can be adjusted if a specific sidebar component is used and needs theming */
     --sidebar-background: 0 0% 98%;
@@ -78,6 +87,13 @@ body {
     --destructive-foreground: 0 0% 98%;
 
     --ring: 217 91% 60%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 217 91% 65%; /* Lighter Blue */
+    --chart-2: 259 91% 65%; /* Lighter Purple */
+    --chart-3: 142 70% 50%; /* Lighter Green */
+    --chart-4: 0 75% 65%;   /* Lighter Red */
+    --chart-5: 38 90% 60%;  /* Lighter Orange */
     
     /* Default dark sidebar colors */
     --sidebar-background: 240 5.9% 10%;

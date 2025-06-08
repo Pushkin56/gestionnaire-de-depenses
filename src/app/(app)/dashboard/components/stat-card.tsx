@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 interface StatCardProps {
   title: string;
   value: number;
-  currencyCode: string; 
+  currencyCode?: string; // Made optional
   icon: LucideIcon;
   description?: string;
 }

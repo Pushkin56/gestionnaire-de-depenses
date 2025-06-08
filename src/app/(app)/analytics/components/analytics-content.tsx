@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChartDataPoint, TimeSeriesDataPoint, Transaction, Category as AppCategory } from "@/lib/types"; // Renamed Category to AppCategory to avoid conflict
+import type { ChartDataPoint, TimeSeriesDataPoint, Transaction, Category as AppCategory } from "@/lib/types"; 
 import CategoryPieChart from "./category-pie-chart";
 import MonthlyEvolutionChart from "./monthly-evolution-chart";
 import BalanceEvolutionChart from "./balance-evolution-chart";
@@ -10,20 +10,21 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
+import React from "react";
 
 
-// Mock data for charts
+// Mock data for charts - using more distinct HSL colors from globals.css
 const mockIncomeByCategory: ChartDataPoint[] = [
-  { name: "Salaire", value: 2500, fill: "hsl(var(--chart-1))" },
-  { name: "Freelance", value: 800, fill: "hsl(var(--chart-2))" },
-  { name: "Investissements", value: 300, fill: "hsl(var(--chart-3))" },
+  { name: "Salaire", value: 2500, fill: "hsl(var(--chart-1))" }, // Blue
+  { name: "Freelance", value: 800, fill: "hsl(var(--chart-3))" }, // Green
+  { name: "Investissements", value: 300, fill: "hsl(var(--chart-5))" }, // Orange
 ];
 
 const mockExpensesByCategory: ChartDataPoint[] = [
-  { name: "Alimentation", value: 450, fill: "hsl(var(--chart-4))" },
-  { name: "Transport", value: 120, fill: "hsl(var(--chart-5))" },
-  { name: "Logement", value: 900, fill: "hsl(var(--chart-1))" }, // Reused color for example
-  { name: "Loisirs", value: 200, fill: "hsl(var(--chart-2))" },  // Reused color for example
+  { name: "Alimentation", value: 450, fill: "hsl(var(--chart-4))" }, // Red
+  { name: "Transport", value: 120, fill: "hsl(var(--chart-2))" }, // Purple
+  { name: "Logement", value: 900, fill: "hsl(var(--chart-1))" }, 
+  { name: "Loisirs", value: 200, fill: "hsl(var(--chart-5))" }, 
 ];
 
 const mockMonthlyEvolution: TimeSeriesDataPoint[] = [
@@ -44,7 +45,7 @@ const mockBalanceEvolution: TimeSeriesDataPoint[] = [
   { date: "2024-06-01", value: 10850 },
 ];
 
-// Mock data for export - ideally this comes from a shared source or API
+// Mock data for export
 const mockCategoriesForExport: AppCategory[] = [
   { id: 'cat1', name: 'Alimentation', type: 'depense', color: '#ef4444', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: '', updated_at: '' },
@@ -60,12 +61,11 @@ const mockTransactionsForExport: Transaction[] = [
 ];
 
 
-export default function AnalyticsContent() {
+function AnalyticsContentComponent() {
   const { toast } = useToast();
 
   const handleExportExcel = () => {
     try {
-      // In a real app, you'd fetch/filter transactions based on current view/filters
       exportTransactionsToExcel(mockTransactionsForExport);
       toast({ title: "Exportation réussie", description: "Le fichier Excel a été téléchargé." });
     } catch (error) {
@@ -76,9 +76,7 @@ export default function AnalyticsContent() {
 
   const handleExportPdf = () => {
     try {
-      // In a real app, you'd fetch/filter transactions
       exportTransactionsToPdf(mockTransactionsForExport);
-      // Toast for PDF might be handled differently since it shows an alert now
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
       toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
@@ -134,3 +132,8 @@ export default function AnalyticsContent() {
     </div>
   );
 }
+
+const AnalyticsContent = React.memo(AnalyticsContentComponent);
+AnalyticsContent.displayName = 'AnalyticsContent';
+
+export default AnalyticsContent;
