@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { SavingGoal, Currency } from "@/lib/types";
-import { Edit2, PlusCircle, Trash2, TrendingUp } from "lucide-react";
+import { Edit2, PlusCircle, Trash2, TrendingUp, Trophy } from "lucide-react"; // Added Trophy
 import { useState } from "react";
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { cn } from "@/lib/utils";
 
 // Mock Data - replace with API calls and state management
 const mockSavingGoalsData: SavingGoal[] = [
@@ -30,7 +31,6 @@ const mockSavingGoalsData: SavingGoal[] = [
   { id: 'sg3', user_id: '1', name: 'Fonds d\'urgence', emoji: '🛡️', target_amount: 5000, current_amount: 5000, currency: 'EUR', currency_symbol: '€', target_date: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
-// Updated to be consistent with PreferencesPage mockCurrencies
 const mockCurrencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', created_at: '' },
   { code: 'USD', name: 'US Dollar', symbol: '$', created_at: '' },
@@ -127,42 +127,58 @@ export default function SavingGoalsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {savingGoals.map((goal) => (
-            <Card key={goal.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-xl">
-                            {goal.emoji && <span className="mr-2 text-2xl">{goal.emoji}</span>}
-                            {goal.name}
-                        </CardTitle>
-                        {goal.target_date && (
-                            <CardDescription>
-                                Objectif pour le {format(parseISO(goal.target_date), 'dd MMMM yyyy', { locale: fr })}
-                            </CardDescription>
-                        )}
-                    </div>
-                    <div className="flex space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditGoal(goal)} className="h-8 w-8">
-                            <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(goal.id)} className="text-destructive hover:text-destructive h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-3">
-                <div className="text-sm text-muted-foreground">
-                  {goal.current_amount.toLocaleString('fr-FR', { style: 'currency', currency: goal.currency })} épargné sur {goal.target_amount.toLocaleString('fr-FR', { style: 'currency', currency: goal.currency })}
-                </div>
-                <Progress value={calculateProgress(goal.current_amount, goal.target_amount)} className="h-3" />
-                <div className="text-xs text-muted-foreground text-right">
-                  {calculateProgress(goal.current_amount, goal.target_amount)}% atteint
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {savingGoals.map((goal) => {
+            const progress = calculateProgress(goal.current_amount, goal.target_amount);
+            const isCompleted = progress === 100;
+
+            return (
+              <Card 
+                key={goal.id} 
+                className={cn(
+                  "flex flex-col",
+                  isCompleted && "border-green-500 dark:border-green-600"
+                )}
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                      <div>
+                          <CardTitle className="text-xl flex items-center">
+                              {goal.emoji && <span className="mr-2 text-2xl">{goal.emoji}</span>}
+                              {goal.name}
+                              {isCompleted && <Trophy className="ml-2 h-5 w-5 text-yellow-500" />}
+                          </CardTitle>
+                          {goal.target_date && (
+                              <CardDescription>
+                                  Objectif pour le {format(parseISO(goal.target_date), 'dd MMMM yyyy', { locale: fr })}
+                              </CardDescription>
+                          )}
+                      </div>
+                      <div className="flex space-x-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditGoal(goal)} className="h-8 w-8">
+                              <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(goal.id)} className="text-destructive hover:text-destructive h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    {goal.current_amount.toLocaleString('fr-FR', { style: 'currency', currency: goal.currency })} épargné sur {goal.target_amount.toLocaleString('fr-FR', { style: 'currency', currency: goal.currency })}
+                  </div>
+                  <Progress 
+                    value={progress} 
+                    className="h-3"
+                    indicatorClassName={isCompleted ? "bg-chart-3" : ""} 
+                  />
+                  <div className="text-xs text-muted-foreground text-right">
+                    {isCompleted ? "🎉 Objectif atteint !" : `${progress}% atteint`}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
       
