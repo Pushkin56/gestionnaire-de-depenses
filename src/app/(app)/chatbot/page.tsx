@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { askFinancialAssistant, type FinancialAssistantInput } from "@/ai/flows/financial-assistant-flow";
 
 export default function ChatbotPage() {
   const [inputValue, setInputValue] = useState("");
@@ -17,15 +18,22 @@ export default function ChatbotPage() {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
-    const newMessages = [...messages, { sender: "user", text: inputValue }];
-    setMessages(newMessages);
+    const userMessage = { sender: "user", text: inputValue };
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue; // Store before clearing
     setInputValue("");
     setIsLoading(true);
 
-    // Simulate AI response for now
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setMessages(prev => [...prev, { sender: "ai", text: "C'est une question intéressante ! Je suis encore en apprentissage, mais demandez-moi plus tard." }]);
-    setIsLoading(false);
+    try {
+      const aiInput: FinancialAssistantInput = { question: currentInput };
+      const response = await askFinancialAssistant(aiInput);
+      setMessages(prev => [...prev, { sender: "ai", text: response.answer }]);
+    } catch (error) {
+      console.error("Error calling financial assistant flow:", error);
+      setMessages(prev => [...prev, { sender: "ai", text: "Désolé, une erreur s'est produite. Veuillez réessayer." }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
