@@ -1,6 +1,4 @@
 
-// This is a placeholder for the Categories management page.
-// Full implementation would involve CRUD operations for categories.
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +7,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Category } from "@/lib/types";
 import { Edit2, PlusCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
+import AddEditCategoryDialog from "./components/add-edit-category-dialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-// Mock Data
 const mockCategoriesData: Category[] = [
   { id: 'cat1', name: 'Alimentation', type: 'depense', color: '#ef4444', user_id: '1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -22,22 +31,48 @@ const mockCategoriesData: Category[] = [
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>(mockCategoriesData);
-  // TODO: Add state for managing add/edit category dialog
+  const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const { toast } = useToast();
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
+  const [categoryToDeleteId, setCategoryToDeleteId] = useState<string | null>(null);
 
   const handleAddCategory = () => {
-    // TODO: Open dialog to add category
-    console.log("Add category clicked");
+    setEditingCategory(null);
+    setIsAddEditCategoryDialogOpen(true);
   };
 
   const handleEditCategory = (category: Category) => {
-    // TODO: Open dialog to edit category
-    console.log("Edit category:", category);
+    setEditingCategory(category);
+    setIsAddEditCategoryDialogOpen(true);
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
-    // TODO: Implement delete logic with confirmation
-    console.log("Delete category:", categoryId);
-    setCategories(prev => prev.filter(cat => cat.id !== categoryId)); // Mock delete
+  const openDeleteConfirmationDialog = (categoryId: string) => {
+    setCategoryToDeleteId(categoryId);
+    setIsConfirmDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCategory = () => {
+    if (categoryToDeleteId) {
+      setCategories(prev => prev.filter(cat => cat.id !== categoryToDeleteId));
+      toast({ title: "Catégorie supprimée", description: "La catégorie a été retirée (simulation)." });
+      setCategoryToDeleteId(null);
+    }
+    setIsConfirmDeleteDialogOpen(false);
+  };
+
+  const handleCategorySaved = (savedCategory: Category) => {
+    setCategories(prevCategories => {
+      const existingIndex = prevCategories.findIndex(c => c.id === savedCategory.id);
+      if (existingIndex > -1) {
+        const updatedCategories = [...prevCategories];
+        updatedCategories[existingIndex] = savedCategory;
+        return updatedCategories;
+      } else {
+        return [...prevCategories, savedCategory];
+      }
+    });
+    setIsAddEditCategoryDialogOpen(false);
   };
   
   return (
@@ -78,8 +113,8 @@ export default function CategoriesPage() {
                             <TableCell>
                                 <span className={`px-2 py-1 text-xs rounded-full ${
                                     category.type === 'recette' 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-red-100 text-red-700'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                                 }`}>
                                     {category.type === 'recette' ? 'Recette' : 'Dépense'}
                                 </span>
@@ -94,7 +129,7 @@ export default function CategoriesPage() {
                                 <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)} className="mr-2">
                                     <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(category.id)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => openDeleteConfirmationDialog(category.id)} className="text-destructive hover:text-destructive">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>
@@ -112,7 +147,28 @@ export default function CategoriesPage() {
           </div>
         </CardContent>
       </Card>
-      {/* TODO: Add Dialog for Add/Edit Category Form */}
+      
+      <AddEditCategoryDialog
+        open={isAddEditCategoryDialogOpen}
+        onOpenChange={setIsAddEditCategoryDialogOpen}
+        onCategorySaved={handleCategorySaved}
+        categoryToEdit={editingCategory}
+      />
+
+      <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setIsConfirmDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer cette catégorie ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible et pourrait affecter les transactions associées (pour l'instant, seule la catégorie est supprimée de la liste).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCategoryToDeleteId(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteCategory}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
