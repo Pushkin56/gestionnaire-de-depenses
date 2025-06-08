@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { FolderOpen, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { FolderOpen, LogOut, Settings, User as UserIcon, Target } from "lucide-react"; // Added Target icon
 import Link from "next/link";
 
 export default function UserNav() {
@@ -57,6 +57,12 @@ export default function UserNav() {
             <DropdownMenuItem>
               <FolderOpen className="mr-2 h-4 w-4" />
               <span>Catégories</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/budgets" passHref>
+            <DropdownMenuItem>
+              <Target className="mr-2 h-4 w-4" />
+              <span>Budgets</span>
             </DropdownMenuItem>
           </Link>
           <Link href="/preferences" passHref>
