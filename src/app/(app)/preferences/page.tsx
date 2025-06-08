@@ -22,6 +22,8 @@ const mockCurrencies: Currency[] = [
   { code: 'USD', name: 'US Dollar', symbol: '$', created_at: '' },
   { code: 'GBP', name: 'British Pound', symbol: '£', created_at: '' },
   { code: 'JPY', name: 'Japanese Yen', symbol: '¥', created_at: '' },
+  { code: 'XOF', name: 'Franc CFA (UEMOA)', symbol: 'FCFA', created_at: '' },
+  { code: 'XAF', name: 'Franc CFA (CEMAC)', symbol: 'FCFA', created_at: '' },
 ];
 
 const mockUserPreferences: UserPreferences = {
@@ -129,3 +131,4 @@ export default function PreferencesPage() {
 
 // Re-export Form components to avoid direct import in page
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
