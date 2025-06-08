@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import React from "react";
 
 interface BalanceEvolutionChartProps {
   data: TimeSeriesDataPoint[]; // Expects date as ISO string, value as balance
@@ -18,7 +19,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export default function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
+function BalanceEvolutionChartComponent({ data }: BalanceEvolutionChartProps) {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground py-8">Aucune donnée disponible pour ce graphique.</p>;
   }
@@ -71,3 +72,7 @@ export default function BalanceEvolutionChart({ data }: BalanceEvolutionChartPro
     </ChartContainer>
   );
 }
+
+const BalanceEvolutionChart = React.memo(BalanceEvolutionChartComponent);
+BalanceEvolutionChart.displayName = 'BalanceEvolutionChart';
+export default BalanceEvolutionChart;

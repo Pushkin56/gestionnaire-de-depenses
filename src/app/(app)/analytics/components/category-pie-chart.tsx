@@ -5,12 +5,13 @@ import type { ChartDataPoint } from "@/lib/types";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import React from "react";
 
 interface CategoryPieChartProps {
   data: ChartDataPoint[];
 }
 
-export default function CategoryPieChart({ data }: CategoryPieChartProps) {
+function CategoryPieChartComponent({ data }: CategoryPieChartProps) {
   const chartConfig = data.reduce((acc, item) => {
     acc[item.name] = { label: item.name, color: item.fill };
     return acc;
@@ -67,3 +68,6 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
   );
 }
 
+const CategoryPieChart = React.memo(CategoryPieChartComponent);
+CategoryPieChart.displayName = 'CategoryPieChart';
+export default CategoryPieChart;

@@ -4,6 +4,7 @@
 import type { TimeSeriesDataPoint } from "@/lib/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, } from "@/components/ui/chart"
+import React from "react";
 
 interface MonthlyEvolutionChartProps {
   data: TimeSeriesDataPoint[]; // Expects date as month name, value as income, value2 as expense
@@ -12,15 +13,15 @@ interface MonthlyEvolutionChartProps {
 const chartConfig = {
   recettes: {
     label: "Recettes",
-    color: "hsl(var(--chart-3))", // Changed from --chart-2 (Purple) to --chart-3 (Green)
+    color: "hsl(var(--chart-3))", // Green
   },
   depenses: {
     label: "Dépenses",
-    color: "hsl(var(--chart-5))", // Changed from --chart-1 (Blue) to --chart-5 (Orange)
+    color: "hsl(var(--chart-5))", // Orange
   },
 } satisfies ChartConfig
 
-export default function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
+function MonthlyEvolutionChartComponent({ data }: MonthlyEvolutionChartProps) {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground py-8">Aucune donnée disponible pour ce graphique.</p>;
   }
@@ -48,3 +49,6 @@ export default function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartPro
   );
 }
 
+const MonthlyEvolutionChart = React.memo(MonthlyEvolutionChartComponent);
+MonthlyEvolutionChart.displayName = 'MonthlyEvolutionChart';
+export default MonthlyEvolutionChart;
