@@ -2,27 +2,32 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChartDataPoint, TimeSeriesDataPoint } from "@/lib/types";
+import type { ChartDataPoint, TimeSeriesDataPoint, Transaction, Category as AppCategory } from "@/lib/types"; // Renamed Category to AppCategory to avoid conflict
 import CategoryPieChart from "./category-pie-chart";
 import MonthlyEvolutionChart from "./monthly-evolution-chart";
 import BalanceEvolutionChart from "./balance-evolution-chart";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export-utils";
+import { useToast } from "@/hooks/use-toast";
+
 
 // Mock data for charts
 const mockIncomeByCategory: ChartDataPoint[] = [
-  { name: "Salaire", value: 2500, fill: "#22c55e" },
-  { name: "Freelance", value: 800, fill: "#06b6d4" },
-  { name: "Investissements", value: 300, fill: "#8b5cf6" },
+  { name: "Salaire", value: 2500, fill: "hsl(var(--chart-1))" },
+  { name: "Freelance", value: 800, fill: "hsl(var(--chart-2))" },
+  { name: "Investissements", value: 300, fill: "hsl(var(--chart-3))" },
 ];
 
 const mockExpensesByCategory: ChartDataPoint[] = [
-  { name: "Alimentation", value: 450, fill: "#ef4444" },
-  { name: "Transport", value: 120, fill: "#3b82f6" },
-  { name: "Logement", value: 900, fill: "#10b981" },
-  { name: "Loisirs", value: 200, fill: "#f59e0b" },
+  { name: "Alimentation", value: 450, fill: "hsl(var(--chart-4))" },
+  { name: "Transport", value: 120, fill: "hsl(var(--chart-5))" },
+  { name: "Logement", value: 900, fill: "hsl(var(--chart-1))" }, // Reused color for example
+  { name: "Loisirs", value: 200, fill: "hsl(var(--chart-2))" },  // Reused color for example
 ];
 
 const mockMonthlyEvolution: TimeSeriesDataPoint[] = [
-  { date: "Jan", value: 2200, value2: 1800 }, // value = income, value2 = expense
+  { date: "Jan", value: 2200, value2: 1800 }, 
   { date: "Fév", value: 2400, value2: 1900 },
   { date: "Mar", value: 2300, value2: 2000 },
   { date: "Avr", value: 2600, value2: 1700 },
@@ -39,42 +44,93 @@ const mockBalanceEvolution: TimeSeriesDataPoint[] = [
   { date: "2024-06-01", value: 10850 },
 ];
 
+// Mock data for export - ideally this comes from a shared source or API
+const mockCategoriesForExport: AppCategory[] = [
+  { id: 'cat1', name: 'Alimentation', type: 'depense', color: '#ef4444', user_id: '1', created_at: '', updated_at: '' },
+  { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: '', updated_at: '' },
+  { id: 'cat3', name: 'Transport', type: 'depense', color: '#3b82f6', user_id: '1', created_at: '', updated_at: '' },
+];
+const mockTransactionsForExport: Transaction[] = [
+  { id: 'tx1', user_id: '1', amount: 50, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-07-15', description: 'Courses', created_at: '', updated_at: '', category: mockCategoriesForExport[0] },
+  { id: 'tx2', user_id: '1', amount: 2000, type: 'recette', currency: 'EUR', category_id: 'cat2', date: '2024-07-01', description: 'Salaire Juillet', created_at: '', updated_at: '', category: mockCategoriesForExport[1] },
+  { id: 'tx3', user_id: '1', amount: 25, type: 'depense', currency: 'USD', category_id: 'cat3', date: '2024-07-10', description: 'Ticket Metro', converted_amount: 23, converted_currency: 'EUR', created_at: '', updated_at: '', category: mockCategoriesForExport[2] },
+  { id: 'tx4', user_id: '1', amount: 150, type: 'recette', currency: 'EUR', category_id: 'cat2', date: '2024-07-05', description: 'Vente en ligne', created_at: '', updated_at: '' },
+  { id: 'tx5', user_id: '1', amount: 75, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-06-20', description: 'Restaurant', created_at: '', updated_at: '' },
+  { id: 'tx6', user_id: '1', amount: 300, type: 'recette', currency: 'USD', category_id: 'cat2', date: '2024-06-10', description: 'Freelance', created_at: '', updated_at: '' },
+];
+
 
 export default function AnalyticsContent() {
+  const { toast } = useToast();
+
+  const handleExportExcel = () => {
+    try {
+      // In a real app, you'd fetch/filter transactions based on current view/filters
+      exportTransactionsToExcel(mockTransactionsForExport);
+      toast({ title: "Exportation réussie", description: "Le fichier Excel a été téléchargé." });
+    } catch (error) {
+      console.error("Erreur d'export Excel:", error);
+      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier Excel.", variant: "destructive" });
+    }
+  };
+
+  const handleExportPdf = () => {
+    try {
+      // In a real app, you'd fetch/filter transactions
+      exportTransactionsToPdf(mockTransactionsForExport);
+      // Toast for PDF might be handled differently since it shows an alert now
+    } catch (error) {
+      console.error("Erreur d'export PDF:", error);
+      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Recettes par Catégorie</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CategoryPieChart data={mockIncomeByCategory} />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Dépenses par Catégorie</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CategoryPieChart data={mockExpensesByCategory} />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Évolution Mensuelle (Recettes vs Dépenses)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MonthlyEvolutionChart data={mockMonthlyEvolution} />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Évolution du Solde</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BalanceEvolutionChart data={mockBalanceEvolution} />
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-2">
+        <Button variant="outline" onClick={handleExportExcel}>
+          <Download className="mr-2 h-4 w-4" />
+          Exporter en Excel
+        </Button>
+        <Button variant="outline" onClick={handleExportPdf}>
+          <Download className="mr-2 h-4 w-4" />
+          Exporter en PDF
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recettes par Catégorie</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoryPieChart data={mockIncomeByCategory} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Dépenses par Catégorie</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoryPieChart data={mockExpensesByCategory} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Évolution Mensuelle (Recettes vs Dépenses)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MonthlyEvolutionChart data={mockMonthlyEvolution} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Évolution du Solde</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BalanceEvolutionChart data={mockBalanceEvolution} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
