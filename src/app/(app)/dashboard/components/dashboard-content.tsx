@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb } from "lucide-react"; // Added BarChart2, Lightbulb
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb, Sparkles, ClipboardList } from "lucide-react"; // Added Sparkles, ClipboardList
 import React, { useState, useEffect, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
@@ -16,6 +16,7 @@ import { exportTransactionsToExcel, exportTransactionsToPdf } from "@/lib/export
 import { getBudgetAlert, type BudgetAlertInput } from "@/ai/flows/budget-alert-flow";
 import { getMonthlyForecast, type MonthlyForecastInput } from "@/ai/flows/monthly-forecast-flow";
 import { getExpenseTrend, type ExpenseTrendInput } from "@/ai/flows/expense-trend-flow";
+import { getHabitAnalysis, type HabitAnalysisInput } from "@/ai/flows/habit-analysis-flow"; // Added new flow
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, isWithinInterval, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
 
@@ -32,6 +33,7 @@ const mockCategoriesForExport: AppCategory[] = [
   { id: 'cat2', name: 'Salaire', type: 'recette', color: '#22c55e', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat3', name: 'Transport', type: 'depense', color: '#3b82f6', user_id: '1', created_at: '', updated_at: '' },
   { id: 'cat-loisirs', name: 'Loisirs', type: 'depense', color: '#f59e0b', user_id: '1', created_at: '', updated_at: '' },
+  { id: 'cat-restaurant', name: 'Restaurants', type: 'depense', color: '#8b5cf6', user_id: '1', created_at: '', updated_at: '' },
 ];
 const mockTransactionsForExport: Transaction[] = [
   { id: 'tx1', user_id: '1', amount: 50, type: 'depense', currency: 'EUR', category_id: 'cat1', date: '2024-07-15', description: 'Courses', created_at: '', updated_at: '', category: mockCategoriesForExport[0] },
@@ -64,6 +66,11 @@ const mockLeisureSpending = {
     previous_month_spending: 70,
 };
 
+const mockRestaurantHabit = {
+    category_name: 'Restaurants',
+    spending_count_this_month: 12, // Simulate frequent restaurant spending
+};
+
 const currencySymbols: { [key: string]: string } = {
     EUR: '€', USD: '$', GBP: '£', JPY: '¥', XOF: 'FCFA', XAF: 'FCFA'
 };
@@ -85,6 +92,9 @@ function DashboardContentComponent() {
   const [trendMessage, setTrendMessage] = useState<string | null>(null);
   const [isTrendLoading, setIsTrendLoading] = useState<boolean>(false);
 
+  const [habitAnalysisMessage, setHabitAnalysisMessage] = useState<string | null>(null);
+  const [isHabitAnalysisLoading, setIsHabitAnalysisLoading] = useState<boolean>(false);
+
   const stats = mockStats;
   const preferredCurrency = user?.primary_currency || 'EUR';
   const preferredCurrencySymbol = currencySymbols[preferredCurrency] || preferredCurrency;
@@ -93,6 +103,7 @@ function DashboardContentComponent() {
   const aiBudgetAlertsEnabled = user?.aiBudgetAlertsEnabled ?? true;
   const aiForecastEnabled = user?.aiForecastEnabled ?? true;
   const aiTrendAnalysisEnabled = user?.aiTrendAnalysisEnabled ?? true;
+  const aiHabitAnalysisEnabled = user?.aiHabitAnalysisEnabled ?? true;
 
   useEffect(() => {
     const fetchBudgetAlert = async () => {
@@ -162,6 +173,26 @@ function DashboardContentComponent() {
     };
     if (aiTrendAnalysisEnabled) fetchTrendAnalysis(); else setTrendMessage(null);
   }, [user, aiTrendAnalysisEnabled, preferredCurrencySymbol]);
+
+  useEffect(() => {
+    const fetchHabitAnalysis = async () => {
+        if (!user || !aiHabitAnalysisEnabled) { setHabitAnalysisMessage(null); return; }
+        setIsHabitAnalysisLoading(true);
+        try {
+            const input: HabitAnalysisInput = { 
+                category_name: mockRestaurantHabit.category_name,
+                spending_count_this_month: mockRestaurantHabit.spending_count_this_month,
+                currency_symbol: preferredCurrencySymbol
+            };
+            const response = await getHabitAnalysis(input);
+            if (response.analysis_message && response.analysis_message.trim() !== "") setHabitAnalysisMessage(response.analysis_message);
+            else setHabitAnalysisMessage(null);
+        } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
+        finally { setIsHabitAnalysisLoading(false); }
+    };
+    if (aiHabitAnalysisEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null);
+  }, [user, aiHabitAnalysisEnabled, preferredCurrencySymbol]);
+
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
     console.log("Transaction added/updated:", transaction);
@@ -237,6 +268,9 @@ function DashboardContentComponent() {
         
         {aiTrendAnalysisEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
         {aiTrendAnalysisEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Analyse des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
+
+        {aiHabitAnalysisEnabled && isHabitAnalysisLoading && ( <Alert className="bg-muted"> <Sparkles className="h-5 w-5" /> <AlertTitle>Analyse des Habitudes IA</AlertTitle> <AlertDescription>Analyse de vos habitudes de dépenses en cours...</AlertDescription> </Alert> )}
+        {aiHabitAnalysisEnabled && !isHabitAnalysisLoading && habitAnalysisMessage && ( <Alert> <Sparkles className="h-5 w-5" /> <AlertTitle>Analyse des Habitudes IA</AlertTitle> <AlertDescription> {habitAnalysisMessage} </AlertDescription> </Alert> )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-end items-center gap-4 my-4">
@@ -256,3 +290,4 @@ const DashboardContent = React.memo(DashboardContentComponent);
 DashboardContent.displayName = 'DashboardContent';
 
 export default DashboardContent;
+

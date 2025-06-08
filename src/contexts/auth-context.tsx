@@ -13,7 +13,7 @@ interface AuthContextType {
   login: (email: string, username?: string) => void; // username for signup then login
   signup: (username: string, email: string) => void;
   logout: () => void;
-  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency' | 'username' | 'aiBudgetAlertsEnabled' | 'aiForecastEnabled' | 'aiTrendAnalysisEnabled'>>) => void;
+  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency' | 'username' | 'aiBudgetAlertsEnabled' | 'aiForecastEnabled' | 'aiTrendAnalysisEnabled' | 'aiHabitAnalysisEnabled'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,9 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const parsedUser = JSON.parse(storedUser);
       // Ensure new AI preference fields have default values if not present
       setUser({
-        aiBudgetAlertsEnabled: true, // Default to true
-        aiForecastEnabled: true,     // Default to true
-        aiTrendAnalysisEnabled: true, // Default to true
+        aiBudgetAlertsEnabled: parsedUser.aiBudgetAlertsEnabled ?? true,
+        aiForecastEnabled: parsedUser.aiForecastEnabled ?? true,
+        aiTrendAnalysisEnabled: parsedUser.aiTrendAnalysisEnabled ?? true,
+        aiHabitAnalysisEnabled: parsedUser.aiHabitAnalysisEnabled ?? true, // Initialize new preference
         ...parsedUser,
       });
     }
@@ -45,9 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       username: usernameFromSignup || email.split('@')[0] || 'Utilisateur Anonyme',
       primary_currency: 'EUR', // Default primary currency
-      aiBudgetAlertsEnabled: true, // Default to true
-      aiForecastEnabled: true,     // Default to true
-      aiTrendAnalysisEnabled: true, // Default to true
+      aiBudgetAlertsEnabled: true, 
+      aiForecastEnabled: true,     
+      aiTrendAnalysisEnabled: true, 
+      aiHabitAnalysisEnabled: true, // Default for new preference
     };
     localStorage.setItem('budgetbento_user', JSON.stringify(mockUser));
     setUser(mockUser);
@@ -88,3 +90,4 @@ export function useAuth() {
   }
   return context;
 }
+

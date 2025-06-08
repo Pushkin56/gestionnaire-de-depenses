@@ -58,6 +58,7 @@ export interface User {
   aiBudgetAlertsEnabled?: boolean;
   aiForecastEnabled?: boolean;
   aiTrendAnalysisEnabled?: boolean;
+  aiHabitAnalysisEnabled?: boolean; // Added new preference
 }
 
 // Props for chart components
@@ -114,3 +115,4 @@ export interface SavingGoal {
   created_at: string;
   updated_at: string;
 }
+

@@ -35,6 +35,7 @@ const preferencesSchema = z.object({
   aiBudgetAlertsEnabled: z.boolean().optional(),
   aiForecastEnabled: z.boolean().optional(),
   aiTrendAnalysisEnabled: z.boolean().optional(),
+  aiHabitAnalysisEnabled: z.boolean().optional(), // Added new preference
 });
 
 type PreferencesFormValues = z.infer<typeof preferencesSchema>;
@@ -53,6 +54,7 @@ export default function PreferencesPage() {
       aiBudgetAlertsEnabled: user?.aiBudgetAlertsEnabled ?? true,
       aiForecastEnabled: user?.aiForecastEnabled ?? true,
       aiTrendAnalysisEnabled: user?.aiTrendAnalysisEnabled ?? true,
+      aiHabitAnalysisEnabled: user?.aiHabitAnalysisEnabled ?? true, // Default for new preference
     },
   });
 
@@ -64,6 +66,7 @@ export default function PreferencesPage() {
         aiBudgetAlertsEnabled: user.aiBudgetAlertsEnabled ?? true,
         aiForecastEnabled: user.aiForecastEnabled ?? true,
         aiTrendAnalysisEnabled: user.aiTrendAnalysisEnabled ?? true,
+        aiHabitAnalysisEnabled: user.aiHabitAnalysisEnabled ?? true, // Reset with new preference
       });
     }
   }, [user, form]);
@@ -78,6 +81,7 @@ export default function PreferencesPage() {
         aiBudgetAlertsEnabled: data.aiBudgetAlertsEnabled,
         aiForecastEnabled: data.aiForecastEnabled,
         aiTrendAnalysisEnabled: data.aiTrendAnalysisEnabled,
+        aiHabitAnalysisEnabled: data.aiHabitAnalysisEnabled, // Save new preference
       });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
@@ -213,6 +217,26 @@ export default function PreferencesPage() {
                         </FormItem>
                     )}
                 />
+                <FormField
+                    control={form.control}
+                    name="aiHabitAnalysisEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Analyse des Habitudes et Recommandations IA</FormLabel>
+                                <FormDescription>
+                                Recevez des observations sur vos habitudes de dépenses et des suggestions.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={isLoading}>
@@ -225,3 +249,4 @@ export default function PreferencesPage() {
     </div>
   );
 }
+
