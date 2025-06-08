@@ -6,10 +6,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import type { Currency } from "@/lib/types"; // UserPreferences type is not directly used here anymore
+import type { Currency } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -27,6 +28,7 @@ const mockCurrencies: Currency[] = [
 ];
 
 const preferencesSchema = z.object({
+  username: z.string().min(1, "Le nom d'utilisateur est requis.").max(50, "Le nom d'utilisateur ne doit pas dépasser 50 caractères."),
   primary_currency: z.string().min(1, "La devise principale est requise."),
   // Add other preferences here, e.g., theme, notifications
 });
@@ -38,17 +40,21 @@ export default function PreferencesPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { user, updateUserPreferences } = useAuth();
-  
+
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
+      username: user?.username || '',
       primary_currency: user?.primary_currency || 'EUR',
     },
   });
 
   useEffect(() => {
-    if (user?.primary_currency) {
-      form.reset({ primary_currency: user.primary_currency });
+    if (user) {
+      form.reset({
+        username: user.username || '',
+        primary_currency: user.primary_currency || 'EUR',
+      });
     }
   }, [user, form]);
 
@@ -57,7 +63,7 @@ export default function PreferencesPage() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      updateUserPreferences({ primary_currency: data.primary_currency });
+      updateUserPreferences({ username: data.username, primary_currency: data.primary_currency });
       toast({ title: "Préférences enregistrées", description: "Vos préférences ont été mises à jour." });
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'enregistrer les préférences.", variant: "destructive" });
@@ -78,10 +84,26 @@ export default function PreferencesPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
-              <CardTitle>Paramètres Généraux</CardTitle>
-              <CardDescription>Personnalisez votre expérience.</CardDescription>
+              <CardTitle>Paramètres du Profil et Généraux</CardTitle>
+              <CardDescription>Personnalisez votre expérience et vos informations.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom d'utilisateur</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Votre nom d'utilisateur" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Ce nom sera affiché dans l'application.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="primary_currency"

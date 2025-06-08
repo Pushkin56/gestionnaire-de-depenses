@@ -13,7 +13,7 @@ interface AuthContextType {
   login: (email: string, username?: string) => void; // username for signup then login
   signup: (username: string, email: string) => void;
   logout: () => void;
-  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency'>>) => void;
+  updateUserPreferences: (prefs: Partial<Pick<User, 'primary_currency' | 'username'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,9 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (email: string, usernameFromSignup?: string) => {
-    const mockUser: User = { 
-      id: 'mock-user-id-' + Date.now(), 
-      email, 
+    const mockUser: User = {
+      id: 'mock-user-id-' + Date.now(),
+      email,
       username: usernameFromSignup || email.split('@')[0] || 'Utilisateur Anonyme',
       primary_currency: 'EUR', // Default primary currency
     };
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/auth');
   };
 
-  const updateUserPreferences = (prefs: Partial<Pick<User, 'primary_currency'>>) => {
+  const updateUserPreferences = (prefs: Partial<Pick<User, 'primary_currency' | 'username'>>) => {
     setUser(currentUser => {
       if (!currentUser) return null;
       const updatedUser = { ...currentUser, ...prefs };
