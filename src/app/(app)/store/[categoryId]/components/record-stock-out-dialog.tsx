@@ -1,9 +1,6 @@
 
 "use client";
 
-// This is a placeholder for the Record Stock Out Dialog.
-// Full implementation will follow.
-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const stockOutFormSchema = z.object({
-  quantity_out: z.coerce.number().positive("La quantité doit être positive."),
+  quantity_out: z.coerce.number().positive("La quantité doit être un nombre positif."),
   // reason: z.string().optional(), // For future use
 });
 
@@ -45,22 +42,30 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
       form.reset({
         quantity_out: 1, // Default to 1 when dialog opens
       });
+      form.clearErrors(); // Clear previous errors
     }
   }, [item, form, open]);
 
   const onSubmit = async (data: StockOutFormValues) => {
     if (!item) return;
+
     if (data.quantity_out > item.quantity) {
-      form.setError("quantity_out", { type: "manual", message: `Quantité maximale : ${item.quantity}` });
+      form.setError("quantity_out", {
+        type: "manual",
+        message: `Quantité maximale disponible : ${item.quantity}.`,
+      });
       return;
     }
 
     setIsLoading(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500)); 
     try {
       onStockOutRecorded(item.id, data.quantity_out);
-      toast({ title: "Sortie de stock enregistrée", description: `${data.quantity_out} unité(s) de "${item.name}" retirée(s).` });
+      toast({ 
+        title: "Sortie de stock enregistrée", 
+        description: `${data.quantity_out} unité(s) de "${item.name}" retirée(s). Stock restant : ${item.quantity - data.quantity_out}.` 
+      });
       onOpenChange(false);
     } catch (error) {
       console.error("Error recording stock out:", error);
@@ -77,7 +82,7 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
         <DialogHeader>
           <DialogTitle>Retirer du Stock: {item.name}</DialogTitle>
           <DialogDescription>
-            Enregistrez une sortie de stock pour cet article. Quantité actuelle : {item.quantity}.
+            Enregistrez une sortie de stock pour cet article. Quantité actuelle en stock : {item.quantity}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -89,7 +94,14 @@ export default function RecordStockOutDialog({ open, onOpenChange, onStockOutRec
                 <FormItem>
                   <FormLabel>Quantité à retirer</FormLabel>
                   <FormControl>
-                    <Input type="number" step="1" placeholder="0" {...field} />
+                    <Input 
+                      type="number" 
+                      step="1" 
+                      placeholder="0" 
+                      {...field} 
+                      min="1" 
+                      max={item.quantity} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

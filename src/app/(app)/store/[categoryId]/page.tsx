@@ -131,6 +131,7 @@ export default function StockCategoryDetailPage() {
           : item
       )
     );
+    // Note: The toast for stock out success is now handled within RecordStockOutDialog
     setIsRecordStockOutDialogOpen(false);
   };
 
@@ -238,7 +239,7 @@ export default function StockCategoryDetailPage() {
                             {item.low_stock_threshold ?? <span className="text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell className="text-right space-x-1 print:hidden">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockOutClick(item)} title="Retirer du stock">
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleRecordStockOutClick(item)} title="Retirer du stock" disabled={item.quantity === 0}>
                               <PackageMinus className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditItemClick(item)} title="Modifier l'article">
@@ -260,4 +261,3 @@ export default function StockCategoryDetailPage() {
     </div>
   );
 }
-
