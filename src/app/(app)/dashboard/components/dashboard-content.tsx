@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb, Sparkles, ClipboardList, Mic } from "lucide-react";
+import { DollarSign, TrendingDown, TrendingUp, Wallet, ListFilter, PlusCircle, Download, AlertTriangle, Info, PartyPopper, BarChart2, Lightbulb, Sparkles, ClipboardList, Mic, Loader2 } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import AddTransactionDialog from "./add-transaction-dialog";
@@ -110,6 +110,7 @@ function DashboardContentComponent() {
         setBudgetAlertMessage(null); return;
       }
       setIsBudgetAlertLoading(true);
+      setBudgetAlertMessage(null); // Clear previous message
       try {
         const currentMonthStart = startOfMonth(new Date());
         const currentMonthEnd = endOfMonth(new Date());
@@ -133,12 +134,13 @@ function DashboardContentComponent() {
       finally { setIsBudgetAlertLoading(false); }
     };
     if (user?.aiBudgetAlertsEnabled) fetchBudgetAlert(); else setBudgetAlertMessage(null);
-  }, [user, preferredCurrency]); 
+  }, [user, preferredCurrency, user?.aiBudgetAlertsEnabled]); 
 
   useEffect(() => {
     const fetchForecast = async () => {
         if (!user || !user.aiForecastEnabled) { setForecastMessage(null); return; }
         setIsForecastLoading(true);
+        setForecastMessage(null);
         try {
             const today = new Date();
             const endOfMonthDate = endOfMonth(today);
@@ -151,12 +153,13 @@ function DashboardContentComponent() {
         finally { setIsForecastLoading(false); }
     };
     if (user?.aiForecastEnabled) fetchForecast(); else setForecastMessage(null);
-  }, [user, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
+  }, [user, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol, user?.aiForecastEnabled]);
 
   useEffect(() => {
     const fetchTrendAnalysis = async () => {
         if (!user || !user.aiInsightsEnabled) { setTrendMessage(null); return; } 
         setIsTrendLoading(true);
+        setTrendMessage(null);
         try {
             const input: ExpenseTrendInput = { 
                 category_name: mockLeisureSpending.category_name,
@@ -170,13 +173,10 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching expense trend:", error); setTrendMessage("Impossible d'analyser les tendances pour le moment.");}
         finally { setIsTrendLoading(false); }
     };
-    if (user?.aiInsightsEnabled) fetchTrendAnalysis(); else setTrendMessage(null); 
-  }, [user, preferredCurrencySymbol]); 
-
-  useEffect(() => {
-    const fetchHabitAnalysis = async () => {
+     const fetchHabitAnalysis = async () => {
         if (!user || !user.aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } 
         setIsHabitAnalysisLoading(true);
+        setHabitAnalysisMessage(null);
         try {
             const input: HabitAnalysisInput = { 
                 category_name: mockRestaurantHabit.category_name,
@@ -189,8 +189,15 @@ function DashboardContentComponent() {
         } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
         finally { setIsHabitAnalysisLoading(false); }
     };
-    if (user?.aiInsightsEnabled) fetchHabitAnalysis(); else setHabitAnalysisMessage(null); 
-  }, [user, preferredCurrencySymbol]); 
+
+    if (user?.aiInsightsEnabled) {
+      fetchTrendAnalysis();
+      fetchHabitAnalysis();
+    } else {
+      setTrendMessage(null);
+      setHabitAnalysisMessage(null);
+    }
+  }, [user, preferredCurrencySymbol, user?.aiInsightsEnabled]); 
 
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
@@ -200,7 +207,7 @@ function DashboardContentComponent() {
 
   const handleEditTransaction = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction);
-    setVoiceDataToPreFill(null); // Ensure voice data is not used when editing
+    setVoiceDataToPreFill(null); 
     setIsAddTransactionOpen(true);
   }, []);
 
@@ -211,7 +218,7 @@ function DashboardContentComponent() {
 
   const openAddTransactionDialog = useCallback(() => {
     setEditingTransaction(null);
-    setVoiceDataToPreFill(null); // Ensure voice data is not used for manual add
+    setVoiceDataToPreFill(null); 
     setIsAddTransactionOpen(true);
   }, []);
   
@@ -226,8 +233,8 @@ function DashboardContentComponent() {
         toast({variant: "destructive", title: "Erreur d'interprétation vocale", description: "Le montant n'a pas pu être déterminé."});
     } else {
         setVoiceDataToPreFill(data);
-        setEditingTransaction(null); // Ensure we are not in edit mode
-        setIsAddTransactionOpen(true); // This will open the dialog
+        setEditingTransaction(null); 
+        setIsAddTransactionOpen(true); 
     }
   }, [toast]);
 
@@ -261,8 +268,8 @@ function DashboardContentComponent() {
   const handleAddTransactionDialogClose = (isOpen: boolean) => {
     setIsAddTransactionOpen(isOpen);
     if (!isOpen) {
-      setVoiceDataToPreFill(null); // Clear pre-fill data when dialog closes
-      setEditingTransaction(null); // Also clear editing transaction
+      setVoiceDataToPreFill(null); 
+      setEditingTransaction(null); 
     }
   };
 
@@ -291,17 +298,65 @@ function DashboardContentComponent() {
       </div>
       
       <div className="space-y-4">
-        {user?.aiBudgetAlertsEnabled && isBudgetAlertLoading && ( <Alert className="bg-muted"> <Info className="h-5 w-5" /> <AlertTitle>Conseiller budgétaire IA</AlertTitle> <AlertDescription>Analyse de votre budget en cours...</AlertDescription> </Alert> )}
-        {user?.aiBudgetAlertsEnabled && !isBudgetAlertLoading && budgetAlertMessage && ( <Alert variant={getBudgetAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}> {getBudgetAlertIcon()} <AlertTitle>Conseiller budgétaire IA</AlertTitle> <AlertDescription> {budgetAlertMessage} </AlertDescription> </Alert> )}
+        {user?.aiBudgetAlertsEnabled && isBudgetAlertLoading && ( 
+          <Alert className="bg-muted"> 
+            <Loader2 className="h-5 w-5 animate-spin" /> 
+            <AlertTitle>Analyse budgétaire en cours...</AlertTitle> 
+            <AlertDescription>Le conseiller IA évalue votre budget.</AlertDescription> 
+          </Alert> 
+        )}
+        {user?.aiBudgetAlertsEnabled && !isBudgetAlertLoading && budgetAlertMessage && ( 
+          <Alert variant={getBudgetAlertVariant()} className={spendingPercentage > 80 && spendingPercentage <=90 ? "border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300 [&>svg]:text-orange-500 dark:[&>svg]:text-orange-400" : ""}> 
+            {getBudgetAlertIcon()} 
+            <AlertTitle>Conseiller budgétaire IA</AlertTitle> 
+            <AlertDescription> {budgetAlertMessage} </AlertDescription> 
+          </Alert> 
+        )}
         
-        {user?.aiForecastEnabled && isForecastLoading && ( <Alert className="bg-muted"> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription>Calcul de votre prévision en cours...</AlertDescription> </Alert> )}
-        {user?.aiForecastEnabled && !isForecastLoading && forecastMessage && ( <Alert> <BarChart2 className="h-5 w-5" /> <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> <AlertDescription> {forecastMessage} </AlertDescription> </Alert> )}
+        {user?.aiForecastEnabled && isForecastLoading && ( 
+          <Alert className="bg-muted"> 
+            <Loader2 className="h-5 w-5 animate-spin" /> 
+            <AlertTitle>Calcul des prévisions en cours...</AlertTitle> 
+            <AlertDescription>L'IA estime votre solde de fin de mois.</AlertDescription> 
+          </Alert> 
+        )}
+        {user?.aiForecastEnabled && !isForecastLoading && forecastMessage && ( 
+          <Alert> 
+            <BarChart2 className="h-5 w-5" /> 
+            <AlertTitle>Prévisionnel de Fin de Mois IA</AlertTitle> 
+            <AlertDescription> {forecastMessage} </AlertDescription> 
+          </Alert> 
+        )}
         
-        {user?.aiInsightsEnabled && isTrendLoading && ( <Alert className="bg-muted"> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçus IA</AlertTitle> <AlertDescription>Analyse de vos tendances de dépenses en cours...</AlertDescription> </Alert> )}
-        {user?.aiInsightsEnabled && !isTrendLoading && trendMessage && ( <Alert> <Lightbulb className="h-5 w-5" /> <AlertTitle>Aperçu des Tendances IA</AlertTitle> <AlertDescription> {trendMessage} </AlertDescription> </Alert> )}
+        {user?.aiInsightsEnabled && isTrendLoading && ( 
+          <Alert className="bg-muted"> 
+            <Loader2 className="h-5 w-5 animate-spin" /> 
+            <AlertTitle>Analyse des tendances en cours...</AlertTitle> 
+            <AlertDescription>L'IA examine vos dépenses récentes.</AlertDescription> 
+          </Alert> 
+        )}
+        {user?.aiInsightsEnabled && !isTrendLoading && trendMessage && ( 
+          <Alert> 
+            <Lightbulb className="h-5 w-5" /> 
+            <AlertTitle>Aperçu des Tendances IA</AlertTitle> 
+            <AlertDescription> {trendMessage} </AlertDescription> 
+          </Alert> 
+        )}
 
-        {user?.aiInsightsEnabled && isHabitAnalysisLoading && ( <Alert className="bg-muted mt-4"> <Sparkles className="h-5 w-5" /> <AlertTitle>Aperçus IA</AlertTitle> <AlertDescription>Analyse de vos habitudes de dépenses en cours...</AlertDescription> </Alert> )}
-        {user?.aiInsightsEnabled && !isHabitAnalysisLoading && habitAnalysisMessage && ( <Alert className="mt-4"> <Sparkles className="h-5 w-5" /> <AlertTitle>Aperçu des Habitudes IA</AlertTitle> <AlertDescription> {habitAnalysisMessage} </AlertDescription> </Alert> )}
+        {user?.aiInsightsEnabled && isHabitAnalysisLoading && ( 
+          <Alert className="bg-muted mt-4"> 
+            <Loader2 className="h-5 w-5 animate-spin" /> 
+            <AlertTitle>Analyse des habitudes en cours...</AlertTitle> 
+            <AlertDescription>L'IA étudie vos habitudes de consommation.</AlertDescription> 
+          </Alert> 
+        )}
+        {user?.aiInsightsEnabled && !isHabitAnalysisLoading && habitAnalysisMessage && ( 
+          <Alert className="mt-4"> 
+            <Sparkles className="h-5 w-5" /> 
+            <AlertTitle>Aperçu des Habitudes IA</AlertTitle> 
+            <AlertDescription> {habitAnalysisMessage} </AlertDescription> 
+          </Alert> 
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-end items-center gap-4 my-4">
