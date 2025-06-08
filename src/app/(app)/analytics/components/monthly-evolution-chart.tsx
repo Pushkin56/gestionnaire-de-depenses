@@ -12,11 +12,11 @@ interface MonthlyEvolutionChartProps {
 const chartConfig = {
   recettes: {
     label: "Recettes",
-    color: "hsl(var(--chart-2))", // Example color
+    color: "hsl(var(--chart-3))", // Changed from --chart-2 (Purple) to --chart-3 (Green)
   },
   depenses: {
     label: "Dépenses",
-    color: "hsl(var(--chart-1))", // Example color
+    color: "hsl(var(--chart-5))", // Changed from --chart-1 (Blue) to --chart-5 (Orange)
   },
 } satisfies ChartConfig
 
@@ -47,3 +47,4 @@ export default function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartPro
     </ChartContainer>
   );
 }
+
