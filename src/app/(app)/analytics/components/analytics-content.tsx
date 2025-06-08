@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChartDataPoint, TimeSeriesDataPoint, Transaction, Category as AppCategory } from "@/lib/types"; 
+import type { ChartDataPoint, TimeSeriesDataPoint, Transaction, Category as AppCategory } from "@/lib/types";
 import CategoryPieChart from "./category-pie-chart";
 import MonthlyEvolutionChart from "./monthly-evolution-chart";
 import BalanceEvolutionChart from "./balance-evolution-chart";
@@ -28,7 +28,7 @@ const mockExpensesByCategory: ChartDataPoint[] = [
 ];
 
 const mockMonthlyEvolution: TimeSeriesDataPoint[] = [
-  { date: "Jan", value: 2200, value2: 1800 }, 
+  { date: "Jan", value: 2200, value2: 1800 },
   { date: "Fév", value: 2400, value2: 1900 },
   { date: "Mar", value: 2300, value2: 2000 },
   { date: "Avr", value: 2600, value2: 1700 },
@@ -77,12 +77,12 @@ function AnalyticsContentComponent() {
   const handleExportPdf = () => {
     try {
       exportTransactionsToPdf(mockTransactionsForExport);
-      // Note: exportTransactionsToPdf currently shows an alert and logs a warning.
-      // If it were to succeed, a success toast would be appropriate here.
-      // toast({ title: "Exportation PDF initiée", description: "Le fichier PDF sera téléchargé." });
+      // La fonction exportTransactionsToPdf ne génère pas de PDF visible pour l'instant.
+      // Nous affichons un message indiquant que la tentative a été faite.
+      toast({ title: "Tentative d'export PDF", description: "La génération de PDF est en cours de développement." });
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
-      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation PDF", description: "Impossible de traiter la demande d'export PDF.", variant: "destructive" });
     }
   };
 

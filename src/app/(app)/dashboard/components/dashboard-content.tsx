@@ -44,7 +44,7 @@ const mockFoodBudget: Budget = {
   user_id: '1', // Should match current user
   category_id: 'cat1', // ID for 'Alimentation'
   category_name: 'Alimentation',
-  amount: 150, 
+  amount: 150,
   currency: 'EUR',
   currency_symbol: '€',
   period: 'monthly',
@@ -105,7 +105,7 @@ export default function DashboardContent() {
             if (response.alert_message && response.alert_message.trim() !== "") {
                 setBudgetAlertMessage(response.alert_message);
             } else {
-                setBudgetAlertMessage(null); 
+                setBudgetAlertMessage(null);
             }
         } else {
             setBudgetAlertMessage(null); // No budget, no alert
@@ -166,22 +166,23 @@ export default function DashboardContent() {
   const handleExportPdf = () => {
     try {
       exportTransactionsToPdf(mockTransactionsForExport);
+      toast({ title: "Tentative d'export PDF", description: "La génération de PDF est en cours de développement." });
     } catch (error) {
       console.error("Erreur d'export PDF:", error);
-      toast({ title: "Erreur d'exportation", description: "Impossible de générer le fichier PDF.", variant: "destructive" });
+      toast({ title: "Erreur d'exportation PDF", description: "Impossible de traiter la demande d'export PDF.", variant: "destructive" });
     }
   };
-  
+
   const getAlertIcon = () => {
     if (spendingPercentage > 80) return <AlertTriangle className="h-5 w-5" />;
     if (spendingPercentage >= 50) return <Info className="h-5 w-5" />;
     if (spendingPercentage < 50 && spendingPercentage > 0) return <PartyPopper className="h-5 w-5" />;
     return <Info className="h-5 w-5" />;
   };
-  
+
   const getAlertVariant = (): "default" | "destructive" | null | undefined => {
     if (spendingPercentage > 90) return "destructive";
-    if (spendingPercentage > 80) return "default"; 
+    if (spendingPercentage > 80) return "default";
     return "default";
   }
 
@@ -227,7 +228,7 @@ export default function DashboardContent() {
           description="Transactions sur la période"
         />
       </div>
-      
+
       {aiAlertsEnabled && isAlertLoading && (
         <Alert className="bg-muted">
           <Info className="h-5 w-5" />

@@ -23,7 +23,7 @@ const groupAndSum = (
     acc[key].total += tx.amount;
     // For simplicity, this assumes transactions in a group might have one primary currency.
     // A real app would handle multi-currency aggregation or convert to a base currency.
-    acc[key].currency = tx.currency; 
+    acc[key].currency = tx.currency;
     return acc;
   }, {} as Record<string, { total: number; currency: string }>);
 
@@ -40,7 +40,7 @@ const generateSheetData = (transactions: Transaction[]) => {
   const daily = groupAndSum(transactions, (date) => format(date, 'yyyy-MM-dd (EEEE)', { locale: fr }), 'Jour');
   const weekly = groupAndSum(transactions, (date) => `Semaine ${getWeek(date, { locale: fr, weekStartsOn: 1 })}, ${getYear(date)}`, 'Semaine');
   const monthly = groupAndSum(transactions, (date) => format(date, 'MMMM yyyy', { locale: fr }), 'Mois');
-  
+
   return { daily, weekly, monthly };
 };
 
@@ -61,11 +61,11 @@ export const exportTransactionsToExcel = (
   if (recettesDaily.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recettesDaily), "Recettes (Journalier)");
   if (recettesWeekly.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recettesWeekly), "Recettes (Hebdomadaire)");
   if (recettesMonthly.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recettesMonthly), "Recettes (Mensuel)");
-  
+
   if (depensesDaily.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(depensesDaily), "Dépenses (Journalier)");
   if (depensesWeekly.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(depensesWeekly), "Dépenses (Hebdomadaire)");
   if (depensesMonthly.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(depensesMonthly), "Dépenses (Mensuel)");
-  
+
   if (wb.SheetNames.length === 0) {
       const emptySheet = XLSX.utils.json_to_sheet([{ Message: "Aucune donnée à exporter pour la période ou les filtres sélectionnés." }]);
       XLSX.utils.book_append_sheet(wb, emptySheet, "Vide");
@@ -78,18 +78,34 @@ export const exportTransactionsToPdf = (
     allTransactions: Transaction[],
     // categories: Category[] // Placeholder for future use
 ) => {
-  console.warn("La fonctionnalité d'export PDF n'est pas encore complètement implémentée.");
-  alert("La fonctionnalité d'export PDF n'est pas encore complètement implémentée. Veuillez utiliser l'export Excel.");
-  // Logic for PDF generation would go here. It's more complex.
-  // Example:
+  // La fonctionnalité d'export PDF complète nécessiterait une librairie comme jsPDF et jsPDF-AutoTable.
+  // Le code ci-dessous est un placeholder et ne génère pas de PDF fonctionnel actuellement.
+  // console.log("Tentative d'export PDF (fonctionnalité limitée/placeholder).");
+
+  // Exemple de ce à quoi pourrait ressembler une implémentation jsPDF (actuellement commenté) :
   // import('jspdf').then(module => {
   //   const { jsPDF } = module;
   //   import('jspdf-autotable').then(() => {
   //     const doc = new jsPDF();
   //     doc.text("Rapport Financier - PDF", 14, 16);
-  //     // Add content, tables for recettesDaily, recettesWeekly etc.
-  //     // (doc as any).autoTable({ head: [['Jour', 'Montant', 'Devise']], body: recettesDaily.map(r => [r.Jour, r.Montant, r.Devise]) });
+  //     // Ajouter ici la logique pour créer les tables à partir des données de allTransactions
+  //     // par exemple, pour les recettes journalières :
+  //     // const { daily: recettesDaily } = generateSheetData(allTransactions.filter(tx => tx.type === 'recette'));
+  //     // if (recettesDaily.length > 0) {
+  //     //   (doc as any).autoTable({
+  //     //     startY: 20,
+  //     //     head: [['Jour', 'Montant', 'Devise']],
+  //     //     body: recettesDaily.map(r => [r.Jour, r.Montant, r.Devise])
+  //     //   });
+  //     // } else {
+  //     //   doc.text("Aucune recette journalière à afficher.", 14, 20);
+  //     // }
   //     doc.save("rapport_financier.pdf");
-  //   });
-  // });
+  //   }).catch(error => console.error("Erreur lors du chargement de jspdf-autotable:", error));
+  // }).catch(error => console.error("Erreur lors du chargement de jspdf:", error));
+
+  // Pour l'instant, cette fonction ne fait rien de visible pour l'utilisateur final
+  // car la génération PDF n'est pas active.
+  // Si vous souhaitez une solution immédiate plus simple, elle pourrait générer un fichier texte
+  // ou simplement ne rien faire et le toast indiquera une tentative.
 };
