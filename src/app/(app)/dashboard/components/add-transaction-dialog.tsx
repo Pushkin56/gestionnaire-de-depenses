@@ -16,10 +16,11 @@ import type { Category, Currency, Transaction, TransactionType } from "@/lib/typ
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarIcon, PlusCircle } from "lucide-react";
+import { CalendarIcon } from "lucide-react"; // Removed PlusCircle as it's not used
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAuth } from "@/contexts/auth-context"; // Import useAuth
 
 // Mock data (replace with API calls)
 const mockCategories: Category[] = [
@@ -44,9 +45,6 @@ const transactionFormSchema = z.object({
   category_id: z.string().optional(),
   date: z.date({ required_error: "La date est requise." }),
   description: z.string().optional(),
-  // Optional conversion fields
-  // convert_to_currency: z.string().optional(),
-  // converted_amount: z.coerce.number().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
@@ -61,13 +59,15 @@ interface AddTransactionDialogProps {
 export default function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, transactionToEdit }: AddTransactionDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth(); // Get user from auth context
+  const preferredCurrency = user?.primary_currency || 'EUR';
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       type: 'depense',
       amount: 0,
-      currency: 'EUR',
+      currency: preferredCurrency, // Use preferred currency
       date: new Date(),
       description: '',
     },
@@ -80,44 +80,45 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
   }, [transactionType]);
 
   useEffect(() => {
-    if (transactionToEdit) {
-      form.reset({
-        type: transactionToEdit.type,
-        amount: transactionToEdit.amount,
-        currency: transactionToEdit.currency,
-        category_id: transactionToEdit.category_id,
-        date: new Date(transactionToEdit.date),
-        description: transactionToEdit.description || '',
-      });
-    } else {
-      form.reset({
-        type: 'depense',
-        amount: 0,
-        currency: 'EUR',
-        date: new Date(),
-        description: '',
-        category_id: undefined,
-      });
+    if (open) { // Only reset form when dialog opens or transactionToEdit changes
+      if (transactionToEdit) {
+        form.reset({
+          type: transactionToEdit.type,
+          amount: transactionToEdit.amount,
+          currency: transactionToEdit.currency,
+          category_id: transactionToEdit.category_id,
+          date: new Date(transactionToEdit.date),
+          description: transactionToEdit.description || '',
+        });
+      } else {
+        form.reset({
+          type: 'depense',
+          amount: 0,
+          currency: preferredCurrency, // Use preferred currency for new transactions
+          date: new Date(),
+          description: '',
+          category_id: undefined,
+        });
+      }
     }
-  }, [transactionToEdit, form, open]);
+  }, [transactionToEdit, form, open, preferredCurrency]);
 
 
   const onSubmit = async (data: TransactionFormValues) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
       const newTransaction: Transaction = {
-        id: transactionToEdit?.id || `tx-${Date.now()}`, // Keep ID if editing
-        user_id: 'mock-user-id', // Replace with actual user ID
+        id: transactionToEdit?.id || `tx-${Date.now()}`,
+        user_id: user?.id || 'mock-user-id', // Use actual user ID if available
         ...data,
-        date: format(data.date, "yyyy-MM-dd"), // Format date for storage
+        date: format(data.date, "yyyy-MM-dd"),
         created_at: transactionToEdit?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      onTransactionAdded(newTransaction); // Callback to update parent state
+      onTransactionAdded(newTransaction);
       toast({ title: transactionToEdit ? "Transaction modifiée" : "Transaction ajoutée", description: "Votre transaction a été enregistrée." });
-      onOpenChange(false); // Close dialog
+      onOpenChange(false);
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'enregistrer la transaction.", variant: "destructive" });
     }
@@ -145,7 +146,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                     <RadioGroup
                       onValueChange={(value) => {
                         field.onChange(value);
-                        form.setValue('category_id', undefined); // Reset category when type changes
+                        form.setValue('category_id', undefined);
                       }}
                       defaultValue={field.value}
                       className="flex space-x-4"
@@ -189,7 +190,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Devise</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || preferredCurrency} defaultValue={preferredCurrency}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choisissez une devise" />
@@ -286,7 +287,6 @@ export default function AddTransactionDialog({ open, onOpenChange, onTransaction
                 </FormItem>
               )}
             />
-            {/* TODO: Add currency conversion fields if needed */}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Annuler</Button>
               <Button type="submit" disabled={isLoading}>
