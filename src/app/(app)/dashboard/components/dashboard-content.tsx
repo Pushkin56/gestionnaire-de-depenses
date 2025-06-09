@@ -104,92 +104,95 @@ function DashboardContentComponent() {
   const preferredCurrency = user?.primary_currency || 'EUR';
   const preferredCurrencySymbol = currencySymbols[preferredCurrency] || preferredCurrency;
 
-  useEffect(() => {
-    const fetchBudgetAlert = async () => {
-      if (!user || !user.aiBudgetAlertsEnabled || mockFoodBudget.currency !== preferredCurrency) {
-        setBudgetAlertMessage(null); return;
-      }
-      setIsBudgetAlertLoading(true);
-      setBudgetAlertMessage(null); 
-      try {
-        const currentMonthStart = startOfMonth(new Date());
-        const currentMonthEnd = endOfMonth(new Date());
-        const foodSpendingFromTransactions = mockTransactionsForExport
-          .filter(tx => tx.category_id === mockFoodBudget.category_id && tx.type === 'depense' && tx.currency === mockFoodBudget.currency && isWithinInterval(new Date(tx.date), { start: currentMonthStart, end: currentMonthEnd }))
-          .reduce((sum, tx) => sum + tx.amount, 0);
-        const foodSpendingFromSubscriptions = mockDashboardSubscriptions
-          .filter(sub => sub.category_id === mockFoodBudget.category_id && sub.currency === mockFoodBudget.currency && sub.billing_period === 'monthly')
-          .reduce((sum, sub) => sum + sub.amount, 0);
-        const totalSpentOnFood = foodSpendingFromTransactions + foodSpendingFromSubscriptions;
-        const currentSpendingPercentage = mockFoodBudget.amount > 0 ? Math.round((totalSpentOnFood / mockFoodBudget.amount) * 100) : 0;
-        setSpendingPercentage(currentSpendingPercentage);
+  const fetchBudgetAlert = useCallback(async () => {
+    if (!user || !user.aiBudgetAlertsEnabled || mockFoodBudget.currency !== preferredCurrency) {
+      setBudgetAlertMessage(null); return;
+    }
+    setIsBudgetAlertLoading(true);
+    setBudgetAlertMessage(null); 
+    try {
+      const currentMonthStart = startOfMonth(new Date());
+      const currentMonthEnd = endOfMonth(new Date());
+      const foodSpendingFromTransactions = mockTransactionsForExport
+        .filter(tx => tx.category_id === mockFoodBudget.category_id && tx.type === 'depense' && tx.currency === mockFoodBudget.currency && isWithinInterval(new Date(tx.date), { start: currentMonthStart, end: currentMonthEnd }))
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      const foodSpendingFromSubscriptions = mockDashboardSubscriptions
+        .filter(sub => sub.category_id === mockFoodBudget.category_id && sub.currency === mockFoodBudget.currency && sub.billing_period === 'monthly')
+        .reduce((sum, sub) => sum + sub.amount, 0);
+      const totalSpentOnFood = foodSpendingFromTransactions + foodSpendingFromSubscriptions;
+      const currentSpendingPercentage = mockFoodBudget.amount > 0 ? Math.round((totalSpentOnFood / mockFoodBudget.amount) * 100) : 0;
+      setSpendingPercentage(currentSpendingPercentage);
 
-        if (mockFoodBudget.amount > 0) {
-            const input: BudgetAlertInput = { category_name: mockFoodBudget.category_name, budget_amount: mockFoodBudget.amount, spent_amount: totalSpentOnFood, currency_symbol: mockFoodBudget.currency_symbol, spending_percentage: currentSpendingPercentage };
-            const response = await getBudgetAlert(input);
-            if (response.alert_message && response.alert_message.trim() !== "") setBudgetAlertMessage(response.alert_message);
-            else setBudgetAlertMessage(null);
-        } else setBudgetAlertMessage(null); 
-      } catch (error) { console.error("Error fetching budget alert:", error); setBudgetAlertMessage(null); } 
-      finally { setIsBudgetAlertLoading(false); }
-    };
+      if (mockFoodBudget.amount > 0) {
+          const input: BudgetAlertInput = { category_name: mockFoodBudget.category_name, budget_amount: mockFoodBudget.amount, spent_amount: totalSpentOnFood, currency_symbol: mockFoodBudget.currency_symbol, spending_percentage: currentSpendingPercentage };
+          const response = await getBudgetAlert(input);
+          if (response.alert_message && response.alert_message.trim() !== "") setBudgetAlertMessage(response.alert_message);
+          else setBudgetAlertMessage(null);
+      } else setBudgetAlertMessage(null); 
+    } catch (error) { console.error("Error fetching budget alert:", error); setBudgetAlertMessage(null); } 
+    finally { setIsBudgetAlertLoading(false); }
+  }, [user, preferredCurrency]);
+
+  useEffect(() => {
     if (user?.aiBudgetAlertsEnabled) fetchBudgetAlert(); else setBudgetAlertMessage(null);
-  }, [user, preferredCurrency]); 
+  }, [user?.aiBudgetAlertsEnabled, fetchBudgetAlert]); 
 
-  useEffect(() => {
-    const fetchForecast = async () => {
-        if (!user || !user.aiForecastEnabled) { setForecastMessage(null); return; }
-        setIsForecastLoading(true);
-        setForecastMessage(null);
-        try {
-            const today = new Date();
-            const endOfMonthDate = endOfMonth(today);
-            const daysRemaining = differenceInCalendarDays(endOfMonthDate, today);
-            const input: MonthlyForecastInput = { current_balance: stats.totalBalance, average_monthly_income: stats.periodIncome, average_monthly_expenses: stats.periodExpenses, days_remaining_in_month: daysRemaining, currency_symbol: preferredCurrencySymbol };
-            const response = await getMonthlyForecast(input);
-            if (response.forecast_message && response.forecast_message.trim() !== "") setForecastMessage(response.forecast_message);
-            else setForecastMessage(null);
-        } catch (error) { console.error("Error fetching monthly forecast:", error); setForecastMessage("Impossible de charger la prévision pour le moment."); } 
-        finally { setIsForecastLoading(false); }
-    };
-    if (user?.aiForecastEnabled) fetchForecast(); else setForecastMessage(null);
+  const fetchForecast = useCallback(async () => {
+      if (!user || !user.aiForecastEnabled) { setForecastMessage(null); return; }
+      setIsForecastLoading(true);
+      setForecastMessage(null);
+      try {
+          const today = new Date();
+          const endOfMonthDate = endOfMonth(today);
+          const daysRemaining = differenceInCalendarDays(endOfMonthDate, today);
+          const input: MonthlyForecastInput = { current_balance: stats.totalBalance, average_monthly_income: stats.periodIncome, average_monthly_expenses: stats.periodExpenses, days_remaining_in_month: daysRemaining, currency_symbol: preferredCurrencySymbol };
+          const response = await getMonthlyForecast(input);
+          if (response.forecast_message && response.forecast_message.trim() !== "") setForecastMessage(response.forecast_message);
+          else setForecastMessage(null);
+      } catch (error) { console.error("Error fetching monthly forecast:", error); setForecastMessage("Impossible de charger la prévision pour le moment."); } 
+      finally { setIsForecastLoading(false); }
   }, [user, stats.totalBalance, stats.periodIncome, stats.periodExpenses, preferredCurrencySymbol]);
 
   useEffect(() => {
-    const fetchTrendAnalysis = async () => {
-        if (!user || !user.aiInsightsEnabled) { setTrendMessage(null); return; } 
-        setIsTrendLoading(true);
-        setTrendMessage(null);
-        try {
-            const input: ExpenseTrendInput = { 
-                category_name: mockLeisureSpending.category_name,
-                current_month_spending: mockLeisureSpending.current_month_spending,
-                previous_month_spending: mockLeisureSpending.previous_month_spending,
-                currency_symbol: preferredCurrencySymbol
-            };
-            const response = await getExpenseTrend(input);
-            if (response.trend_message && response.trend_message.trim() !== "") setTrendMessage(response.trend_message);
-            else setTrendMessage(null);
-        } catch (error) { console.error("Error fetching expense trend:", error); setTrendMessage("Impossible d'analyser les tendances pour le moment.");}
-        finally { setIsTrendLoading(false); }
-    };
-     const fetchHabitAnalysis = async () => {
-        if (!user || !user.aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } 
-        setIsHabitAnalysisLoading(true);
-        setHabitAnalysisMessage(null);
-        try {
-            const input: HabitAnalysisInput = { 
-                category_name: mockRestaurantHabit.category_name,
-                spending_count_this_month: mockRestaurantHabit.spending_count_this_month,
-                currency_symbol: preferredCurrencySymbol
-            };
-            const response = await getHabitAnalysis(input);
-            if (response.analysis_message && response.analysis_message.trim() !== "") setHabitAnalysisMessage(response.analysis_message);
-            else setHabitAnalysisMessage(null);
-        } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
-        finally { setIsHabitAnalysisLoading(false); }
-    };
+    if (user?.aiForecastEnabled) fetchForecast(); else setForecastMessage(null);
+  }, [user?.aiForecastEnabled, fetchForecast]);
 
+  const fetchTrendAnalysis = useCallback(async () => {
+      if (!user || !user.aiInsightsEnabled) { setTrendMessage(null); return; } 
+      setIsTrendLoading(true);
+      setTrendMessage(null);
+      try {
+          const input: ExpenseTrendInput = { 
+              category_name: mockLeisureSpending.category_name,
+              current_month_spending: mockLeisureSpending.current_month_spending,
+              previous_month_spending: mockLeisureSpending.previous_month_spending,
+              currency_symbol: preferredCurrencySymbol
+          };
+          const response = await getExpenseTrend(input);
+          if (response.trend_message && response.trend_message.trim() !== "") setTrendMessage(response.trend_message);
+          else setTrendMessage(null);
+      } catch (error) { console.error("Error fetching expense trend:", error); setTrendMessage("Impossible d'analyser les tendances pour le moment.");}
+      finally { setIsTrendLoading(false); }
+  },[user, preferredCurrencySymbol]);
+
+   const fetchHabitAnalysis = useCallback(async () => {
+      if (!user || !user.aiInsightsEnabled) { setHabitAnalysisMessage(null); return; } 
+      setIsHabitAnalysisLoading(true);
+      setHabitAnalysisMessage(null);
+      try {
+          const input: HabitAnalysisInput = { 
+              category_name: mockRestaurantHabit.category_name,
+              spending_count_this_month: mockRestaurantHabit.spending_count_this_month,
+              currency_symbol: preferredCurrencySymbol
+          };
+          const response = await getHabitAnalysis(input);
+          if (response.analysis_message && response.analysis_message.trim() !== "") setHabitAnalysisMessage(response.analysis_message);
+          else setHabitAnalysisMessage(null);
+      } catch (error) { console.error("Error fetching habit analysis:", error); setHabitAnalysisMessage("Impossible d'analyser vos habitudes pour le moment.");}
+      finally { setIsHabitAnalysisLoading(false); }
+  }, [user, preferredCurrencySymbol]);
+
+  useEffect(() => {
     if (user?.aiInsightsEnabled) {
       fetchTrendAnalysis();
       fetchHabitAnalysis();
@@ -197,7 +200,7 @@ function DashboardContentComponent() {
       setTrendMessage(null);
       setHabitAnalysisMessage(null);
     }
-  }, [user, preferredCurrencySymbol]); 
+  }, [user?.aiInsightsEnabled, fetchTrendAnalysis, fetchHabitAnalysis]); 
 
 
   const handleTransactionAdded = useCallback((transaction: Transaction) => {
@@ -386,5 +389,3 @@ function DashboardContentComponent() {
 const DashboardContent = React.memo(DashboardContentComponent);
 DashboardContent.displayName = 'DashboardContent';
 export default DashboardContent;
-
-    
