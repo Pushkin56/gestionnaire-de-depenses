@@ -291,10 +291,10 @@ function DashboardContentComponent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Solde Total" value={stats.totalBalance} currencyCode={preferredCurrency} icon={Wallet} description="Solde actuel sur tous les comptes" />
-        <StatCard title="Recettes de la Période" value={stats.periodIncome} currencyCode={preferredCurrency} icon={TrendingUp} description="Revenus sur la période sélectionnée" />
-        <StatCard title="Dépenses de la Période" value={stats.periodExpenses} currencyCode={preferredCurrency} icon={TrendingDown} description="Dépenses sur la période sélectionnée" />
-        <StatCard title="Nombre de Transactions" value={stats.transactionCount} icon={ListFilter} description="Transactions sur la période" />
+        <StatCard title="Solde Total" value={stats.totalBalance} currencyCode={preferredCurrency} icon={Wallet} description="Solde actuel sur tous les comptes" valueClassName="text-primary" />
+        <StatCard title="Recettes de la Période" value={stats.periodIncome} currencyCode={preferredCurrency} icon={TrendingUp} description="Revenus sur la période sélectionnée" valueClassName="text-green-700 dark:text-green-500" />
+        <StatCard title="Dépenses de la Période" value={stats.periodExpenses} currencyCode={preferredCurrency} icon={TrendingDown} description="Dépenses sur la période sélectionnée" valueClassName="text-amber-700 dark:text-amber-500" />
+        <StatCard title="Nombre de Transactions" value={stats.transactionCount} icon={ListFilter} description="Transactions sur la période" valueClassName="text-indigo-700 dark:text-indigo-500" />
       </div>
       
       <div className="space-y-4">
@@ -386,3 +386,5 @@ function DashboardContentComponent() {
 const DashboardContent = React.memo(DashboardContentComponent);
 DashboardContent.displayName = 'DashboardContent';
 export default DashboardContent;
+
+    
