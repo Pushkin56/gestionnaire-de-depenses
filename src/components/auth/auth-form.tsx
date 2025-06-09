@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DollarSign } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react"; // Import React
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -48,7 +48,7 @@ export function AuthForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      login(data.email); // Mock login, password not checked here
+      login(data.email); // Mock login, password not checked here for simplicity of prototype
       toast({ title: "Connexion réussie", description: "Bienvenue !" });
     } catch (error) {
       toast({ title: "Erreur de connexion", description: (error as Error).message, variant: "destructive" });
@@ -61,9 +61,9 @@ export function AuthForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      signup(data.username, data.email); // Mock signup
+      signup(data.username, data.email); // Mock signup, password not stored/hashed
       toast({ title: "Inscription réussie", description: "Vous pouvez maintenant vous connecter." });
-      // Switch to login tab or automatically log in based on auth context behavior
+      // Consider switching to login tab or automatically logging in based on auth context behavior
     } catch (error) {
       toast({ title: "Erreur d'inscription", description: (error as Error).message, variant: "destructive" });
     }
